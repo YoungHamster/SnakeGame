@@ -229,7 +229,7 @@ int GameLogic::OneTick(int snake1dir, int snake2dir, int snake3dir, int snake4di
 	{
 		for (int j = 0; j < physics.size(); j++)
 		{
-			if (physics[j].type != DEAD_SNAKE)
+			if (physics[j].type != DEAD_SNAKE && snakes[i][0].PhysicalBodyID != -1)
 			{
 				if (AABBvsAABB(physics[snakes[i][0].PhysicalBodyID].borders, physics[j].borders) && j != snakes[i][0].PhysicalBodyID)
 				{
@@ -248,13 +248,39 @@ int GameLogic::OneTick(int snake1dir, int snake2dir, int snake3dir, int snake4di
 	}
 
 	if (snake1alive)
-		MoveSnake(snake1dir, 0);
+	{
+		if (snake1dir != 0)
+			MoveSnake(snake1dir, 0);
+		else
+			MoveSnake(HandleAIForSnake(0), 0);
+	}
 	if (snake2alive)
-		MoveSnake(snake2dir, 1);
+	{
+		if (snake2dir != 0)
+			MoveSnake(snake2dir, 1);
+		else
+			MoveSnake(HandleAIForSnake(1), 1);
+	}
 	if (snake3alive)
-		MoveSnake(snake3dir, 2);
+	{
+		if (snake3dir != 0)
+			MoveSnake(snake3dir, 2);
+		else
+			MoveSnake(HandleAIForSnake(2), 2);
+	}
 	if (snake4alive)
-		MoveSnake(snake4dir, 3);
+	{
+		if (snake4dir != 0)
+			MoveSnake(snake4dir, 3);
+		else
+			MoveSnake(HandleAIForSnake(3), 3);
+	}
+	//if (snake2alive)
+	//	MoveSnake(snake2dir, 1);
+	//if (snake3alive)
+	//	MoveSnake(snake3dir, 2);
+	//if (snake4alive)
+	//	MoveSnake(snake4dir, 3);
 
 	return 0;
 }
@@ -439,6 +465,7 @@ void GameLogic::KillSnake(int SnakeID)
 		for (int i = 0; i < snakes[0].size(); i++)
 		{
 			physics[snakes[SnakeID][i].PhysicalBodyID].type = DEAD_SNAKE;
+			snakes[SnakeID][i].PhysicalBodyID = -1;
 		}
 		snake1alive = false;
 		break;
@@ -446,6 +473,7 @@ void GameLogic::KillSnake(int SnakeID)
 		for (int i = 0; i < snakes[1].size(); i++)
 		{
 			physics[snakes[SnakeID][i].PhysicalBodyID].type = DEAD_SNAKE;
+			snakes[SnakeID][i].PhysicalBodyID = -1;
 		}
 		snake2alive = false;
 		break;
@@ -453,6 +481,7 @@ void GameLogic::KillSnake(int SnakeID)
 		for (int i = 0; i < snakes[2].size(); i++)
 		{
 			physics[snakes[SnakeID][i].PhysicalBodyID].type = DEAD_SNAKE;
+			snakes[SnakeID][i].PhysicalBodyID = -1;
 		}
 		snake3alive = false;
 		break;
@@ -460,9 +489,182 @@ void GameLogic::KillSnake(int SnakeID)
 		for (int i = 0; i < snakes[3].size(); i++)
 		{
 			physics[snakes[SnakeID][i].PhysicalBodyID].type = DEAD_SNAKE;
+			snakes[SnakeID][i].PhysicalBodyID = -1;
 		}
 		snake4alive = false;
 		break;
 	}
 	snakes[SnakeID].erase(snakes[SnakeID].begin() + 1, snakes[SnakeID].end());
+}
+
+//int GameLogic::HandleAIForSnake(int SnakeID)
+//{
+//	/*AABB futureSnakePos;
+//	futureSnakePos = physics[snakes[SnakeID][0].PhysicalBodyID].borders;
+//	if (physics[apple.GetPhysicalBodyID()].borders.min.x > physics[snakes[SnakeID][0].PhysicalBodyID].borders.min.x)
+//	{
+//		if (snakes[SnakeID][0].Direction == LEFT)
+//		{
+//			futureSnakePos.min.y = futureSnakePos.max.y;
+//			futureSnakePos.max.y = futureSnakePos.max.y + 1;
+//			if (!CheckCollisionsForAI(futureSnakePos)) return UP;
+//
+//			futureSnakePos.min.y = futureSnakePos.min.y - 2;
+//			futureSnakePos.max.y = futureSnakePos.max.y - 2;
+//			if (!CheckCollisionsForAI(futureSnakePos)) return DOWN;
+//		}
+//		futureSnakePos.min.x = futureSnakePos.max.x;
+//		futureSnakePos.max.x = futureSnakePos.max.x + 1;
+//		if (CheckCollisionsForAI(futureSnakePos)) return UP;
+//		return RIGHT;
+//	}
+//	if (physics[apple.GetPhysicalBodyID()].borders.min.x < physics[snakes[SnakeID][0].PhysicalBodyID].borders.min.x)
+//	{
+//		if (snakes[SnakeID][0].Direction == RIGHT)
+//		{
+//			AABB futureSnakePos;
+//			futureSnakePos = physics[snakes[SnakeID][0].PhysicalBodyID].borders;
+//			futureSnakePos.min.y = futureSnakePos.max.y;
+//			futureSnakePos.max.y = futureSnakePos.max.y + 1;
+//			if (!CheckCollisionsForAI(futureSnakePos)) return UP;
+//
+//			futureSnakePos.min.y = futureSnakePos.min.y - 2;
+//			futureSnakePos.max.y = futureSnakePos.max.y - 2;
+//			if (!CheckCollisionsForAI(futureSnakePos)) return DOWN;
+//		}
+//		futureSnakePos.max.x = futureSnakePos.min.x;
+//		futureSnakePos.min.x = futureSnakePos.min.x - 1;
+//		if (CheckCollisionsForAI(futureSnakePos)) return DOWN;
+//		return LEFT;
+//	}
+//	if (physics[apple.GetPhysicalBodyID()].borders.min.y > physics[snakes[SnakeID][0].PhysicalBodyID].borders.min.y)
+//	{
+//		if (snakes[SnakeID][0].Direction == DOWN)
+//		{
+//			AABB futureSnakePos;
+//			futureSnakePos = physics[snakes[SnakeID][0].PhysicalBodyID].borders;
+//			futureSnakePos.min.x = futureSnakePos.max.x;
+//			futureSnakePos.max.x = futureSnakePos.max.x + 1;
+//			if (!CheckCollisionsForAI(futureSnakePos)) return RIGHT;
+//
+//			futureSnakePos.min.x = futureSnakePos.min.x - 2;
+//			futureSnakePos.max.x = futureSnakePos.max.x - 2;
+//			if (!CheckCollisionsForAI(futureSnakePos)) return LEFT;
+//		}
+//		futureSnakePos.min.y = futureSnakePos.max.y;
+//		futureSnakePos.max.y = futureSnakePos.max.y + 1;
+//		if (CheckCollisionsForAI(futureSnakePos)) return RIGHT;
+//		return UP;
+//	}
+//	if (physics[apple.GetPhysicalBodyID()].borders.min.y < physics[snakes[SnakeID][0].PhysicalBodyID].borders.min.y)
+//	{
+//		if (snakes[SnakeID][0].Direction == UP)
+//		{
+//			AABB futureSnakePos;
+//			futureSnakePos = physics[snakes[SnakeID][0].PhysicalBodyID].borders;
+//			futureSnakePos.min.x = futureSnakePos.max.x;
+//			futureSnakePos.max.x = futureSnakePos.max.x + 1;
+//			if (!CheckCollisionsForAI(futureSnakePos)) return RIGHT;
+//
+//			futureSnakePos.min.x = futureSnakePos.min.x - 2;
+//			futureSnakePos.max.x = futureSnakePos.max.x - 2;
+//			if (!CheckCollisionsForAI(futureSnakePos)) return LEFT;
+//		}
+//		futureSnakePos.max.y = futureSnakePos.min.y;
+//		futureSnakePos.min.x = futureSnakePos.min.y - 1;
+//		if (CheckCollisionsForAI(futureSnakePos)) return LEFT;
+//		return DOWN;
+//	}*/
+//}
+
+int GameLogic::HandleAIForSnake(int SnakeID)
+{
+	bool canTurnUp = true;
+	bool canTurnDown = true;
+	bool canTurnLeft = true;
+	bool canTurnRight = true;
+	AABB possibleFuturePos = physics[snakes[SnakeID][0].PhysicalBodyID].borders;
+	possibleFuturePos.min.x = possibleFuturePos.max.x;
+	possibleFuturePos.max.x = possibleFuturePos.max.x + 1;
+	for (int i = 0; i < physics.size(); i++)
+	{
+		if (AABBvsAABB(physics[i].borders, possibleFuturePos) && physics[i].type != APPLE && physics[i].type != DEAD_SNAKE)
+			canTurnRight = false;
+	}
+
+	possibleFuturePos.max.x = possibleFuturePos.max.x - 2;
+	possibleFuturePos.min.x = possibleFuturePos.min.x - 2;
+	for (int i = 0; i < physics.size(); i++)
+	{
+		if (AABBvsAABB(physics[i].borders, possibleFuturePos) && physics[i].type != APPLE && physics[i].type != DEAD_SNAKE)
+			canTurnLeft = false;
+	}
+
+	possibleFuturePos = physics[snakes[SnakeID][0].PhysicalBodyID].borders;
+	possibleFuturePos.min.y = possibleFuturePos.max.y;
+	possibleFuturePos.max.y = possibleFuturePos.max.y + 1;
+	for (int i = 0; i < physics.size(); i++)
+	{
+		if (AABBvsAABB(physics[i].borders, possibleFuturePos) && physics[i].type != APPLE && physics[i].type != DEAD_SNAKE)
+			canTurnUp = false;
+	}
+
+	possibleFuturePos.min.y = possibleFuturePos.min.y - 2;
+	possibleFuturePos.max.y = possibleFuturePos.max.y - 2;
+	for (int i = 0; i < physics.size(); i++)
+	{
+		if (AABBvsAABB(physics[i].borders, possibleFuturePos) && physics[i].type != APPLE && physics[i].type != DEAD_SNAKE)
+			canTurnDown = false;
+	}
+
+	if (physics[apple.GetPhysicalBodyID()].borders.min.y > physics[snakes[SnakeID][0].PhysicalBodyID].borders.min.y)
+	{
+		if (canTurnUp)
+			return UP;
+		if (canTurnLeft)
+			return LEFT;
+		if (canTurnRight)
+			return RIGHT;
+		if (canTurnDown)
+			return DOWN;
+	}
+	if (physics[apple.GetPhysicalBodyID()].borders.min.y < physics[snakes[SnakeID][0].PhysicalBodyID].borders.min.y)
+	{
+		if (canTurnDown)
+			return DOWN;
+		if (canTurnLeft)
+			return LEFT;
+		if (canTurnRight)
+			return RIGHT;
+		if (canTurnUp)
+			return UP;
+	}
+	if (physics[apple.GetPhysicalBodyID()].borders.min.x < physics[snakes[SnakeID][0].PhysicalBodyID].borders.min.x)
+	{
+		if (canTurnLeft)
+			return LEFT;
+		if (canTurnUp)
+			return UP;
+		if (canTurnDown)
+			return DOWN;
+		if (canTurnRight)
+			return RIGHT;
+	}
+	if (physics[apple.GetPhysicalBodyID()].borders.min.x > physics[snakes[SnakeID][0].PhysicalBodyID].borders.min.x)
+	{
+		if (canTurnRight)
+			return RIGHT;
+		if (canTurnUp)
+			return UP;
+		if (canTurnDown)
+			return DOWN;
+		if (canTurnLeft)
+			return LEFT;
+	}
+	/*for (int i = 0; i < physics.size(); i++)
+	{
+		if (AABBvsAABB(physics[i].borders, object) && physics[i].type != APPLE && physics[i].type != DEAD_SNAKE)
+			return true;
+	}
+	return false;*/
 }

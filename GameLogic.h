@@ -38,4 +38,8 @@ public:
 	bool MoveSnakeBlock(SnakeBlock* block);
 	bool MoveSnake(int Direction, int SnakeID);
 	void KillSnake(int SnakeID);
+
+	int HandleAIForSnake(int SnakeID);
+	int CheckCollisionsForAI(int SnakeID);
+	void AStar(AABB start, AABB goal);
 };
