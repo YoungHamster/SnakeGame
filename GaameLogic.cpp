@@ -661,10 +661,12 @@ int GameLogic::HandleAIForSnake(int SnakeID)
 		if (canTurnLeft)
 			return LEFT;
 	}
-	/*for (int i = 0; i < physics.size(); i++)
-	{
-		if (AABBvsAABB(physics[i].borders, object) && physics[i].type != APPLE && physics[i].type != DEAD_SNAKE)
-			return true;
-	}
-	return false;*/
+	if (canTurnUp)
+		return UP;
+	if (canTurnLeft)
+		return LEFT;
+	if (canTurnRight)
+		return RIGHT;
+	if (canTurnDown)
+		return DOWN;
 }

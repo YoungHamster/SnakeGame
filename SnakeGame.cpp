@@ -37,7 +37,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 	GameLogic game;
 	Renderer rend;
 	int t = clock();
-	if (!game.Init(36, 64, 5, 5, 0, 0))
+	if (!game.Init(36, 64, 5, 5, 5, 5))
 	{
 		MessageBox(windowhandle, "ERROR!!! Failed to initialize game logic", "ERROR!!! Failed to initialize game logic", MB_OK);
 		return -1;
@@ -76,11 +76,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 			}
 			if (delta >= 200)
 			{
-				game.OneTick(0, snake1dir, snake2dir, 0);
-				
+				game.OneTick(0, 0, 0, 0);
+				rend.RenderFrame(game.physics, game.physics.size());
 				lastmovetime = clock();
 			}
-			rend.RenderFrame(game.physics, game.physics.size());
 		}
 	}
 
