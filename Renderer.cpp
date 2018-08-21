@@ -14,9 +14,6 @@ bool Renderer::Init(HWND windowHandle)
 		&rendertarget);
 	if (res != S_OK) return false;
 
-	this->WindowWidth = rect.right - rect.left;
-	this->WindowHeigth = rect.bottom - rect.top;
-
 	res = rendertarget->CreateSolidColorBrush(D2D1::ColorF(0, 0, 0, 0), &brush);
 	if (res != S_OK) return false;
 
@@ -64,14 +61,61 @@ bool Renderer::Init(HWND windowHandle)
 	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\Apple.png", &bitmaps[37])) return false;
 	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\Border.png", &bitmaps[38])) return false;
 
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\A.png", &bitmaps[39])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\B.png", &bitmaps[40])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\C.png", &bitmaps[41])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\D.png", &bitmaps[42])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\E.png", &bitmaps[43])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\F.png", &bitmaps[44])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\G.png", &bitmaps[45])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\H.png", &bitmaps[46])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\I.png", &bitmaps[47])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\J.png", &bitmaps[48])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\K.png", &bitmaps[49])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\L.png", &bitmaps[50])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\M.png", &bitmaps[51])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\N.png", &bitmaps[52])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\O.png", &bitmaps[53])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\P.png", &bitmaps[54])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\Q.png", &bitmaps[55])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\R.png", &bitmaps[56])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\S.png", &bitmaps[57])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\T.png", &bitmaps[58])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\U.png", &bitmaps[59])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\V.png", &bitmaps[60])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\W.png", &bitmaps[61])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\X.png", &bitmaps[62])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\Y.png", &bitmaps[63])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\Z.png", &bitmaps[64])) return false;
+
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\+.png", &bitmaps[65])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\-.png", &bitmaps[66])) return false;
+
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\0.png", &bitmaps[67])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\1.png", &bitmaps[68])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\2.png", &bitmaps[69])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\3.png", &bitmaps[70])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\4.png", &bitmaps[71])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\5.png", &bitmaps[72])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\6.png", &bitmaps[73])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\7.png", &bitmaps[74])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\8.png", &bitmaps[75])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\9.png", &bitmaps[76])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\SPACE.png", &bitmaps[77])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\DOT.png", &bitmaps[78])) return false;
+	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\EXCLAMATION POINT.png", &bitmaps[79])) return false;
+
 	return true;
 }
 
-void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, int numberOfObjects)
+void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, int numberOfObjects, int Snake1size, int Snake2size, int Snake3size, int Snake4size)
 {
+	int renderWidth = this->rendertarget->GetPixelSize().width;
 	int renderHeigth = this->rendertarget->GetPixelSize().height;
+	int xFactor = renderWidth / GameFieldWidth;
+	int yFactor = renderHeigth / GameFieldHeigth;
 	BeginDraw();
-	ClearScreen(0.0f, 0.0f, 0.0f);
+	ClearScreen(0.6f, 0.5f, 0.5f);
 
 	SDL_Rect rect;
 	SDL_Rect srcrect;
@@ -79,15 +123,35 @@ void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, int numberOfObj
 	{
 		if (physics[i].type != DEAD_SNAKE && physics[i].type < 40 && physics[i].type > 0)
 		{
-			rect.x = physics[i].borders.min.x * 20;
+			/*rect.x = physics[i].borders.min.x * 20;
 			rect.y = renderHeigth - physics[i].borders.max.y * 20;
 			rect.w = (physics[i].borders.max.x - physics[i].borders.min.x) * 20;
-			rect.h = (physics[i].borders.max.y - physics[i].borders.min.y) * 20;
+			rect.h = (physics[i].borders.max.y - physics[i].borders.min.y) * 20;*/
+			rect.x = physics[i].borders.min.x * xFactor;
+			rect.y = renderHeigth - physics[i].borders.max.y * yFactor;
+			rect.w = (physics[i].borders.max.x - physics[i].borders.min.x) * xFactor;
+			rect.h = (physics[i].borders.max.y - physics[i].borders.min.y) * yFactor;
 			DrawBitmap(bitmaps[physics[i].type - 1], &rect, NULL);
 		}
-		
-		//physics = physics + sizeOfSingleObject;
 	}
+
+	std::wstring snake1length;
+	std::wstring snake2length;
+	std::wstring snake3length;
+	std::wstring snake4length;
+	snake1length = L"Snake 1 ";
+	snake2length = L"Snake 2 ";
+	snake3length = L"Snake 3 ";
+	snake4length = L"Snake 4 ";
+	snake1length = snake1length + std::to_wstring(Snake1size);
+	snake2length = snake2length + std::to_wstring(Snake2size);
+	snake3length = snake3length + std::to_wstring(Snake3size);
+	snake4length = snake4length + std::to_wstring(Snake4size);
+	
+	DrawTextOnRend(snake1length.c_str(), snake1length.size(), 4, 1280 - CountTextWidth(snake1length.c_str(), snake1length.size(), 4), 20);
+	DrawTextOnRend(snake2length.c_str(), snake2length.size(), 4, 1280 - CountTextWidth(snake2length.c_str(), snake2length.size(), 4), 70);
+	DrawTextOnRend(snake3length.c_str(), snake3length.size(), 4, 1280 - CountTextWidth(snake3length.c_str(), snake3length.size(), 4), 120);
+	DrawTextOnRend(snake4length.c_str(), snake4length.size(), 4, 1280 - CountTextWidth(snake4length.c_str(), snake4length.size(), 4), 170);
 	EndDraw();
 }
 
@@ -205,4 +269,47 @@ bool Renderer::LoadID2D1Bitmap(LPCWSTR filename, ID2D1Bitmap **ppBitmap)
 	if (wicFrame) wicFrame->Release();
 
 	return true;
+}
+
+int Renderer::CountTextWidth(const wchar_t* text, int TextSize, int Size)
+{
+	int Width = 0;
+	int CurrentCharacterInBitmapsArrayID;
+	int currentW;
+	for (int i = 0; i < TextSize; i++)
+	{
+		if (text[i] >= L'A' && text[i] <= L'Z') { CurrentCharacterInBitmapsArrayID = text[i] - 26; }
+		if (text[i] == L'+') { CurrentCharacterInBitmapsArrayID = 65; }
+		if (text[i] == L'-') { CurrentCharacterInBitmapsArrayID = 66; }
+		if (text[i] >= L'0' && text[i] <= L'9') { CurrentCharacterInBitmapsArrayID = text[i] + 19; }
+		if (text[i] == L' ') { CurrentCharacterInBitmapsArrayID = 77; }
+		if (text[i] == L'.') { CurrentCharacterInBitmapsArrayID = 78; }
+		if (text[i] == L'!') { CurrentCharacterInBitmapsArrayID = 79; }
+		currentW = Size * bitmaps[CurrentCharacterInBitmapsArrayID]->GetPixelSize().width;
+		Width = Width + currentW + Size;
+	}
+	return Width;
+}
+
+void Renderer::DrawTextOnRend(const wchar_t* text, int TextSize, int Size, int minX, int minY)
+{
+	int DrawOffset = 0;
+	int CurrentCharacterInBitmapsArrayID;
+	SDL_Rect rect;
+	rect.y = minY;
+	for (int i = 0; i < TextSize; i++)
+	{
+		if (text[i] >= L'A' && text[i] <= L'Z')	{ CurrentCharacterInBitmapsArrayID = text[i] - 26; }
+		if (text[i] == L'+') { CurrentCharacterInBitmapsArrayID = 65; }
+		if (text[i] == L'-') { CurrentCharacterInBitmapsArrayID = 66; }
+		if (text[i] >= L'0' && text[i] <= L'9')	{ CurrentCharacterInBitmapsArrayID = text[i] + 19; }
+		if (text[i] == L' ') { CurrentCharacterInBitmapsArrayID = 77; }
+		if (text[i] == L'.') { CurrentCharacterInBitmapsArrayID = 78; }
+		if (text[i] == L'!') { CurrentCharacterInBitmapsArrayID = 79; }
+		rect.x = minX + DrawOffset;
+		rect.w = Size * bitmaps[CurrentCharacterInBitmapsArrayID]->GetPixelSize().width;
+		rect.h = Size * bitmaps[CurrentCharacterInBitmapsArrayID]->GetPixelSize().height;
+		DrawBitmap(bitmaps[CurrentCharacterInBitmapsArrayID], &rect, NULL);
+		DrawOffset = DrawOffset + rect.w + Size;
+	}
 }
