@@ -1,5 +1,32 @@
 #include "Renderer.h"
 
+int wstrlen(const wchar_t* str)
+{
+	int i = 0;
+	while (str[i] != '\0')
+	{
+		i++;
+	}
+	return i;
+}
+
+wchar_t* strcatW(const wchar_t *str1, const wchar_t *str2)
+{
+	wchar_t *str = new wchar_t[(wstrlen(str1) + wstrlen(str2) + 1)];
+	for (int i = 0; i < wstrlen(str); i++)
+	{
+		if (i < wstrlen(str1))
+		{
+			str[i] = str1[i];
+		}
+		else
+		{
+			str[i] = str2[i - wstrlen(str1)];
+		}
+	}
+	return str;
+}
+
 bool Renderer::Init(HWND windowHandle)
 {
 
@@ -123,10 +150,6 @@ void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, int numberOfObj
 	{
 		if (physics[i].type != DEAD_SNAKE && physics[i].type < 40 && physics[i].type > 0)
 		{
-			/*rect.x = physics[i].borders.min.x * 20;
-			rect.y = renderHeigth - physics[i].borders.max.y * 20;
-			rect.w = (physics[i].borders.max.x - physics[i].borders.min.x) * 20;
-			rect.h = (physics[i].borders.max.y - physics[i].borders.min.y) * 20;*/
 			rect.x = physics[i].borders.min.x * xFactor;
 			rect.y = renderHeigth - physics[i].borders.max.y * yFactor;
 			rect.w = (physics[i].borders.max.x - physics[i].borders.min.x) * xFactor;
@@ -135,23 +158,48 @@ void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, int numberOfObj
 		}
 	}
 
-	std::wstring snake1length;
-	std::wstring snake2length;
-	std::wstring snake3length;
-	std::wstring snake4length;
-	snake1length = L"Snake 1 ";
-	snake2length = L"Snake 2 ";
-	snake3length = L"Snake 3 ";
-	snake4length = L"Snake 4 ";
-	snake1length = snake1length + std::to_wstring(Snake1size);
-	snake2length = snake2length + std::to_wstring(Snake2size);
-	snake3length = snake3length + std::to_wstring(Snake3size);
-	snake4length = snake4length + std::to_wstring(Snake4size);
+	wchar_t *snake1a = strcatW(L"SNAKE ", L"1 ");
+	wchar_t *snake2a = strcatW(L"SNAKE ", L"2 ");
+	wchar_t *snake3a = strcatW(L"SNAKE ", L"3 ");
+	wchar_t *snake4a = strcatW(L"SNAKE ", L"4 ");
+	wchar_t *snake1length = new wchar_t[10];
+	wchar_t *snake2length = new wchar_t[10];
+	wchar_t *snake3length = new wchar_t[10];
+	wchar_t *snake4length = new wchar_t[10];
+
+	_itow_s(Snake1size, snake1length, 10, 10);
+	_itow_s(Snake2size, snake2length, 10, 10);
+	_itow_s(Snake3size, snake3length, 10, 10);
+	_itow_s(Snake4size, snake4length, 10, 10);
+	/*snake1 = strcatW(snake1, snake1length);
+	snake1 = strcatW(snake2, snake2length);
+	snake1 = strcatW(snake3, snake3length);
+	snake1 = strcatW(snake4, snake4length);*/
+	wchar_t *snake1 = strcatW(snake1a, snake1length);
+	wchar_t *snake2 = strcatW(snake2a, snake2length);
+	wchar_t *snake3 = strcatW(snake3a, snake3length);
+	wchar_t *snake4 = strcatW(snake4a, snake4length);
+
 	
-	DrawTextOnRend(snake1length.c_str(), snake1length.size(), 4, 1280 - CountTextWidth(snake1length.c_str(), snake1length.size(), 4), 20);
-	DrawTextOnRend(snake2length.c_str(), snake2length.size(), 4, 1280 - CountTextWidth(snake2length.c_str(), snake2length.size(), 4), 70);
+	DrawTextOnRend(snake1, wstrlen(snake1), 4, 1280 - CountTextWidth(snake1, wstrlen(snake1), 4), 20);
+	DrawTextOnRend(snake2, wstrlen(snake2), 4, 1280 - CountTextWidth(snake2, wstrlen(snake2), 4), 70);
+	DrawTextOnRend(snake3, wstrlen(snake3), 4, 1280 - CountTextWidth(snake3, wstrlen(snake3), 4), 120);
+	DrawTextOnRend(snake4, wstrlen(snake4), 4, 1280 - CountTextWidth(snake4, wstrlen(snake4), 4), 170);
+	delete[] snake1length;
+	delete[] snake2length;
+	delete[] snake3length;
+	delete[] snake4length;
+	delete[] snake1;
+	delete[] snake2;
+	delete[] snake3;
+	delete[] snake4;
+	delete[] snake1a;
+	delete[] snake2a;
+	delete[] snake3a;
+	delete[] snake4a;
+	/*DrawTextOnRend(snake2length.c_str(), snake2length.size(), 4, 1280 - CountTextWidth(snake2length.c_str(), snake2length.size(), 4), 70);
 	DrawTextOnRend(snake3length.c_str(), snake3length.size(), 4, 1280 - CountTextWidth(snake3length.c_str(), snake3length.size(), 4), 120);
-	DrawTextOnRend(snake4length.c_str(), snake4length.size(), 4, 1280 - CountTextWidth(snake4length.c_str(), snake4length.size(), 4), 170);
+	DrawTextOnRend(snake4length.c_str(), snake4length.size(), 4, 1280 - CountTextWidth(snake4length.c_str(), snake4length.size(), 4), 170);*/
 	EndDraw();
 }
 
@@ -274,8 +322,8 @@ bool Renderer::LoadID2D1Bitmap(LPCWSTR filename, ID2D1Bitmap **ppBitmap)
 int Renderer::CountTextWidth(const wchar_t* text, int TextSize, int Size)
 {
 	int Width = 0;
-	int CurrentCharacterInBitmapsArrayID;
-	int currentW;
+	int CurrentCharacterInBitmapsArrayID = 77;
+	int currentW = 0;
 	for (int i = 0; i < TextSize; i++)
 	{
 		if (text[i] >= L'A' && text[i] <= L'Z') { CurrentCharacterInBitmapsArrayID = text[i] - 26; }
