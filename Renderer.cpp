@@ -1,32 +1,5 @@
 #include "Renderer.h"
 
-int wstrlen(const wchar_t* str)
-{
-	int i = 0;
-	while (str[i] != '\0')
-	{
-		i++;
-	}
-	return i;
-}
-
-wchar_t* strcatW(const wchar_t *str1, const wchar_t *str2)
-{
-	wchar_t *str = new wchar_t[(wstrlen(str1) + wstrlen(str2) + 1)];
-	for (int i = 0; i < wstrlen(str); i++)
-	{
-		if (i < wstrlen(str1))
-		{
-			str[i] = str1[i];
-		}
-		else
-		{
-			str[i] = str2[i - wstrlen(str1)];
-		}
-	}
-	return str;
-}
-
 bool Renderer::Init(HWND windowHandle)
 {
 
@@ -132,6 +105,12 @@ bool Renderer::Init(HWND windowHandle)
 	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\DOT.png", &bitmaps[78])) return false;
 	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\ASCII\\EXCLAMATION POINT.png", &bitmaps[79])) return false;
 
+	for (int i = 0; i < BITMAPSNUMBER; i++)
+	{
+		bitmapsHWs[i].Width = bitmaps[i]->GetPixelSize().width;
+		bitmapsHWs[i].Height = bitmaps[i]->GetPixelSize().height;
+	}
+
 	return true;
 }
 
@@ -142,7 +121,7 @@ void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, int numberOfObj
 	int xFactor = renderWidth / GameFieldWidth;
 	int yFactor = renderHeigth / GameFieldHeigth;
 	BeginDraw();
-	ClearScreen(0.6f, 0.5f, 0.5f);
+	ClearScreen(0.4f, 0.4f, 0.4f);
 
 	SDL_Rect rect;
 	SDL_Rect srcrect;
@@ -171,20 +150,20 @@ void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, int numberOfObj
 	_itow_s(Snake2size, snake2length, 10, 10);
 	_itow_s(Snake3size, snake3length, 10, 10);
 	_itow_s(Snake4size, snake4length, 10, 10);
-	/*snake1 = strcatW(snake1, snake1length);
-	snake1 = strcatW(snake2, snake2length);
-	snake1 = strcatW(snake3, snake3length);
-	snake1 = strcatW(snake4, snake4length);*/
 	wchar_t *snake1 = strcatW(snake1a, snake1length);
 	wchar_t *snake2 = strcatW(snake2a, snake2length);
 	wchar_t *snake3 = strcatW(snake3a, snake3length);
 	wchar_t *snake4 = strcatW(snake4a, snake4length);
 
 	
-	DrawTextOnRend(snake1, wstrlen(snake1), 4, 1280 - CountTextWidth(snake1, wstrlen(snake1), 4), 20);
-	DrawTextOnRend(snake2, wstrlen(snake2), 4, 1280 - CountTextWidth(snake2, wstrlen(snake2), 4), 70);
-	DrawTextOnRend(snake3, wstrlen(snake3), 4, 1280 - CountTextWidth(snake3, wstrlen(snake3), 4), 120);
-	DrawTextOnRend(snake4, wstrlen(snake4), 4, 1280 - CountTextWidth(snake4, wstrlen(snake4), 4), 170);
+	/*DrawTextOnRend(snake1, wstrlen(snake1), 4, 1240 - CountTextWidth(snake1, wstrlen(snake1), 4), 20);
+	DrawTextOnRend(snake2, wstrlen(snake2), 4, 1240 - CountTextWidth(snake2, wstrlen(snake2), 4), 70);
+	DrawTextOnRend(snake3, wstrlen(snake3), 4, 1240 - CountTextWidth(snake3, wstrlen(snake3), 4), 120);
+	DrawTextOnRend(snake4, wstrlen(snake4), 4, 1240 - CountTextWidth(snake4, wstrlen(snake4), 4), 170);*/
+	DrawTextOnRend(snake1, 4, 25, 20);
+	DrawTextOnRend(snake2, 4, 25, 70);
+	DrawTextOnRend(snake3, 4, 25, 120);
+	DrawTextOnRend(snake4, 4, 25, 170);
 	delete[] snake1length;
 	delete[] snake2length;
 	delete[] snake3length;
@@ -197,9 +176,19 @@ void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, int numberOfObj
 	delete[] snake2a;
 	delete[] snake3a;
 	delete[] snake4a;
-	/*DrawTextOnRend(snake2length.c_str(), snake2length.size(), 4, 1280 - CountTextWidth(snake2length.c_str(), snake2length.size(), 4), 70);
-	DrawTextOnRend(snake3length.c_str(), snake3length.size(), 4, 1280 - CountTextWidth(snake3length.c_str(), snake3length.size(), 4), 120);
-	DrawTextOnRend(snake4length.c_str(), snake4length.size(), 4, 1280 - CountTextWidth(snake4length.c_str(), snake4length.size(), 4), 170);*/
+	EndDraw();
+}
+
+void Renderer::RenderFrame(std::vector<button>& buttons)
+{
+	BeginDraw();
+	ClearScreen(0.4f, 0.4f, 0.4f);
+
+	for (int i = 0; i < buttons.size(); i++)
+	{
+		RenderButton(buttons[i]);
+	}
+
 	EndDraw();
 }
 
@@ -319,33 +308,13 @@ bool Renderer::LoadID2D1Bitmap(LPCWSTR filename, ID2D1Bitmap **ppBitmap)
 	return true;
 }
 
-int Renderer::CountTextWidth(const wchar_t* text, int TextSize, int Size)
-{
-	int Width = 0;
-	int CurrentCharacterInBitmapsArrayID = 77;
-	int currentW = 0;
-	for (int i = 0; i < TextSize; i++)
-	{
-		if (text[i] >= L'A' && text[i] <= L'Z') { CurrentCharacterInBitmapsArrayID = text[i] - 26; }
-		if (text[i] == L'+') { CurrentCharacterInBitmapsArrayID = 65; }
-		if (text[i] == L'-') { CurrentCharacterInBitmapsArrayID = 66; }
-		if (text[i] >= L'0' && text[i] <= L'9') { CurrentCharacterInBitmapsArrayID = text[i] + 19; }
-		if (text[i] == L' ') { CurrentCharacterInBitmapsArrayID = 77; }
-		if (text[i] == L'.') { CurrentCharacterInBitmapsArrayID = 78; }
-		if (text[i] == L'!') { CurrentCharacterInBitmapsArrayID = 79; }
-		currentW = Size * bitmaps[CurrentCharacterInBitmapsArrayID]->GetPixelSize().width;
-		Width = Width + currentW + Size;
-	}
-	return Width;
-}
-
-void Renderer::DrawTextOnRend(const wchar_t* text, int TextSize, int Size, int minX, int minY)
+void Renderer::DrawTextOnRend(const wchar_t* text, double Size, int minX, int minY)
 {
 	int DrawOffset = 0;
 	int CurrentCharacterInBitmapsArrayID;
 	SDL_Rect rect;
 	rect.y = minY;
-	for (int i = 0; i < TextSize; i++)
+	for (int i = 0; i < wstrlen(text); i++)
 	{
 		if (text[i] >= L'A' && text[i] <= L'Z')	{ CurrentCharacterInBitmapsArrayID = text[i] - 26; }
 		if (text[i] == L'+') { CurrentCharacterInBitmapsArrayID = 65; }
@@ -359,5 +328,17 @@ void Renderer::DrawTextOnRend(const wchar_t* text, int TextSize, int Size, int m
 		rect.h = Size * bitmaps[CurrentCharacterInBitmapsArrayID]->GetPixelSize().height;
 		DrawBitmap(bitmaps[CurrentCharacterInBitmapsArrayID], &rect, NULL);
 		DrawOffset = DrawOffset + rect.w + Size;
+	}
+}
+
+void Renderer::RenderButton(button button)
+{
+	if (button.Centered)
+	{
+		DrawTextOnRend(button.Text, button.Size, (1280 / 2) - CountTextWidth(button.Text, button.Size), button.ClickBox.min.y);
+	}
+	else
+	{
+		DrawTextOnRend(button.Text, button.Size, button.ClickBox.min.x, button.ClickBox.min.y);
 	}
 }
