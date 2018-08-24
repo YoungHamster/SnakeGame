@@ -107,14 +107,13 @@ bool Renderer::Init(HWND windowHandle)
 
 	for (int i = 0; i < BITMAPSNUMBER; i++)
 	{
-		bitmapsHWs[i].Width = bitmaps[i]->GetPixelSize().width;
-		bitmapsHWs[i].Height = bitmaps[i]->GetPixelSize().height;
+		bitmapsHWs[i] = bitmaps[i]->GetPixelSize().width;
 	}
 
 	return true;
 }
 
-void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, int numberOfObjects, int Snake1size, int Snake2size, int Snake3size, int Snake4size)
+void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, std::vector<button>& buttons, int numberOfObjects, int Snake1size, int Snake2size, int Snake3size, int Snake4size)
 {
 	int renderWidth = this->rendertarget->GetPixelSize().width;
 	int renderHeigth = this->rendertarget->GetPixelSize().height;
@@ -124,7 +123,6 @@ void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, int numberOfObj
 	ClearScreen(0.4f, 0.4f, 0.4f);
 
 	SDL_Rect rect;
-	SDL_Rect srcrect;
 	for (int i = 0; i < numberOfObjects; i++)
 	{
 		if (physics[i].type != DEAD_SNAKE && physics[i].type < 40 && physics[i].type > 0)
@@ -308,7 +306,7 @@ bool Renderer::LoadID2D1Bitmap(LPCWSTR filename, ID2D1Bitmap **ppBitmap)
 	return true;
 }
 
-void Renderer::DrawTextOnRend(const wchar_t* text, double Size, int minX, int minY)
+void Renderer::DrawTextOnRend(const wchar_t* text, int Size, int minX, int minY)
 {
 	int DrawOffset = 0;
 	int CurrentCharacterInBitmapsArrayID;
@@ -333,12 +331,46 @@ void Renderer::DrawTextOnRend(const wchar_t* text, double Size, int minX, int mi
 
 void Renderer::RenderButton(button button)
 {
-	if (button.Centered)
+	if (!button.Enlarged)
 	{
-		DrawTextOnRend(button.Text, button.Size, (1280 / 2) - CountTextWidth(button.Text, button.Size), button.ClickBox.min.y);
+		if (button.Centered)
+		{
+			DrawTextOnRend(button.Text, button.Size, (1280 / 2) - CountTextWidth(button.Text, button.Size) / 2, button.ClickBox.min.y);
+		}
+		else
+		{
+			DrawTextOnRend(button.Text, button.Size, button.ClickBox.min.x, button.ClickBox.min.y);
+		}
 	}
 	else
 	{
-		DrawTextOnRend(button.Text, button.Size, button.ClickBox.min.x, button.ClickBox.min.y);
+		if (button.Centered)
+		{
+			DrawTextOnRend(button.Text, button.Size + 1, (1280 / 2) - CountTextWidth(button.Text, button.Size + 1) / 2, button.ClickBox.min.y);
+		}
+		else
+		{
+			DrawTextOnRend(button.Text, button.Size + 1, button.ClickBox.min.x, button.ClickBox.min.y);
+		}
 	}
+}
+
+int Renderer::CountTextWidth(const wchar_t* text, int Size)
+{
+	int Width = 0;
+	int CurrentCharacterInBitmapsArrayID = 77;
+	int currentW = 0;
+	for (int i = 0; i < wstrlen(text); i++)
+	{
+		if (text[i] >= L'A' && text[i] <= L'Z') { CurrentCharacterInBitmapsArrayID = text[i] - 26; }
+		if (text[i] == L'+') { CurrentCharacterInBitmapsArrayID = 65; }
+		if (text[i] == L'-') { CurrentCharacterInBitmapsArrayID = 66; }
+		if (text[i] >= L'0' && text[i] <= L'9') { CurrentCharacterInBitmapsArrayID = text[i] + 19; }
+		if (text[i] == L' ') { CurrentCharacterInBitmapsArrayID = 77; }
+		if (text[i] == L'.') { CurrentCharacterInBitmapsArrayID = 78; }
+		if (text[i] == L'!') { CurrentCharacterInBitmapsArrayID = 79; }
+		currentW = bitmapsHWs[CurrentCharacterInBitmapsArrayID] * Size;//bitmaps[CurrentCharacterInBitmapsArrayID]->GetPixelSize().width;
+		Width = Width + currentW + Size;
+	}
+	return Width;
 }

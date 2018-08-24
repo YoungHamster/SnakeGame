@@ -8,9 +8,9 @@ struct button
 	bool Enlarged = false;
 	AABB ClickBox;
 	AABB EnlargedClickBox;
-	double Size;
+	int Size;
 	wchar_t *Text;
-	int PointedPageID;
+	void(*whattodo)();
 };
 
 struct CheckBox

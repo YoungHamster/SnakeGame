@@ -47,7 +47,7 @@ void Page::CheckMouseCollisions(POINT mouse)
 	}
 }
 
-bool Page::AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text, double Size, int PointedPageID)
+bool Page::AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text, int Size, int PointedPageID, Renderer* renderer)
 {
 	button button;
 	button.PointedPageID = PointedPageID;
@@ -55,9 +55,16 @@ bool Page::AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text,
 	button.Centered = Centered;
 	button.Text = Text;
 	AABB box;
-	box.min.x = x;
+	if (!Centered)
+	{
+		box.min.x = x;
+	}
+	else
+	{
+		box.min.x = 1280 / 2 - renderer->CountTextWidth(Text, Size) / 2;
+	}
 	box.min.y = y;
-	box.max.x = box.min.x + CountTextWidth(Text, Size);
+	box.max.x = box.min.x + renderer->CountTextWidth(Text, Size);
 	box.max.y = box.min.y + 8 * Size;
 	button.Size = Size;
 	button.ClickBox = box;

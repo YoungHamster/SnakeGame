@@ -2,9 +2,10 @@
 #include <vector>
 #include <Windows.h>
 
-#include "Button.h"
-#include "SDL_Rect.h"
+//#include "Button.h"
+#ifndef RENDERER
 #include "Renderer.h"
+#endif
 
 class Page
 {
@@ -14,6 +15,6 @@ public:
 
 	bool AddButton(button button);
 	//bool AddButton(bool Clickable, bool Centered, SDL_Rect rect, wchar_t *Text, double Size);
-	bool AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text, double Size, int PointedPageID);
+	bool AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text, int Size, int PointedPageID, Renderer* renderer);
 	void CheckMouseCollisions(POINT mouse);
 };

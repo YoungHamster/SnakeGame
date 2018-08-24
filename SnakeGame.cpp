@@ -3,10 +3,13 @@
 
 #include "Random.h"
 #include "Physics.h"
-#include "Renderer.h"
 #include "GameLogic.h"
 #include "Apple.h"
 #include "ReadInput.h"
+#include "Menu.h"
+#ifndef RENDERER
+#include "Renderer.h"
+#endif
 
 static int tempDir1;
 static int tempDir2;
@@ -48,6 +51,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 
 	GameLogic game;
 	Renderer rend;
+	Menu menu;
 	int t = clock();
 	if (!game.Init(GameFieldWidth, GameFieldHeight, Snake1Length, Snake2Length, Snake3Length, Snake4Length))
 	{
@@ -61,6 +65,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 		MessageBox(windowhandle, "ERROR!!! Failed to initialize renderer", "ERROR!!! Failed to initialize renderer", MB_OK);
 		return -2;
 	}
+	menu.Init(&rend);
 	//rend.SetGFW_GFH(16, 9);
 
 
@@ -80,31 +85,37 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 		}
 		else
 		{
-			//Sleep(50);
-			//delta = clock() - lastmovetime;
-			/*if (delta >= 16)
-			{
-				int tempdir = ReadInputSnake1();
-				if (tempdir != 0)
-					snake1dir = tempdir;
-				tempdir = ReadInputSnake2();
-				if (tempdir != 0)
-					snake2dir = tempdir;
-			}*/
-			//if (delta >= 5)
+			////Sleep(50);
+			////delta = clock() - lastmovetime;
+			///*if (delta >= 16)
 			//{
-				/*if (tempDir1 > 0 && tempDir1 < 5 && tempDir2 > 0 && tempDir2 < 5)
-				{
-					snake1dir = tempDir1;
-					snake2dir = tempDir2;
-				}*/
-				//wchar_t str[2];
-				//_itow_s(game.snakes[0].size(), str, 2, 10);
-				//SetWindowTextW(windowhandle, str);
-				game.OneTick(0, 0, 0, 0);
-				rend.RenderFrame(game.physics, game.physics.size(), game.snakes[0].size(), game.snakes[1].size(), game.snakes[2].size(), game.snakes[3].size());
-				lastmovetime = clock();
-			//}
+			//	int tempdir = ReadInputSnake1();
+			//	if (tempdir != 0)
+			//		snake1dir = tempdir;
+			//	tempdir = ReadInputSnake2();
+			//	if (tempdir != 0)
+			//		snake2dir = tempdir;
+			//}*/
+			////if (delta >= 5)
+			////{
+			//	/*if (tempDir1 > 0 && tempDir1 < 5 && tempDir2 > 0 && tempDir2 < 5)
+			//	{
+			//		snake1dir = tempDir1;
+			//		snake2dir = tempDir2;
+			//	}*/
+			//	//wchar_t str[2];
+			//	//_itow_s(game.snakes[0].size(), str, 2, 10);
+			//	//SetWindowTextW(windowhandle, str);
+			//	game.OneTick(0, 0, 0, 0);
+			//	rend.RenderFrame(game.physics, game.physics.size(), game.snakes[0].size(), game.snakes[1].size(), game.snakes[2].size(), game.snakes[3].size());
+			//	lastmovetime = clock();
+			////}
+			POINT p;
+			GetCursorPos(&p);
+			ScreenToClient(windowhandle, &p);
+			menu.CheckMouseCollision(p);
+			rend.RenderFrame(menu.GetButtonsVectorForRenderer());
+			Sleep(30);
 		}
 	}
 
