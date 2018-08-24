@@ -113,17 +113,36 @@ bool Renderer::Init(HWND windowHandle)
 	return true;
 }
 
-void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, std::vector<button>& buttons, int numberOfObjects, int Snake1size, int Snake2size, int Snake3size, int Snake4size)
+void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, std::vector<button>& buttons, bool menumode)
 {
+	float opacity;
+	float backgroundR;
+	float backgroundG;
+	float backgroundB;
+	if (menumode)
+	{
+		backgroundR = 0.5f;
+		backgroundG = 0.4f;
+		backgroundB = 0.4f;
+		opacity = 0.5f;
+	}
+	else
+	{
+		backgroundR = 0.4f;
+		backgroundG = 0.5f;
+		backgroundB = 0.4f;
+		opacity = 1.0f;
+	}
+
 	int renderWidth = this->rendertarget->GetPixelSize().width;
 	int renderHeigth = this->rendertarget->GetPixelSize().height;
 	int xFactor = renderWidth / GameFieldWidth;
 	int yFactor = renderHeigth / GameFieldHeigth;
 	BeginDraw();
-	ClearScreen(0.4f, 0.4f, 0.4f);
+	ClearScreen(backgroundR, backgroundG, backgroundB);
 
 	SDL_Rect rect;
-	for (int i = 0; i < numberOfObjects; i++)
+	for (int i = 0; i < physics.size(); i++)
 	{
 		if (physics[i].type != DEAD_SNAKE && physics[i].type < 40 && physics[i].type > 0)
 		{
@@ -131,73 +150,25 @@ void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, std::vector<but
 			rect.y = renderHeigth - physics[i].borders.max.y * yFactor;
 			rect.w = (physics[i].borders.max.x - physics[i].borders.min.x) * xFactor;
 			rect.h = (physics[i].borders.max.y - physics[i].borders.min.y) * yFactor;
-			DrawBitmap(bitmaps[physics[i].type - 1], &rect, NULL);
+			DrawBitmap(bitmaps[physics[i].type - 1], &rect, NULL, opacity);
 		}
 	}
-
-	wchar_t *snake1a = strcatW(L"SNAKE ", L"1 ");
-	wchar_t *snake2a = strcatW(L"SNAKE ", L"2 ");
-	wchar_t *snake3a = strcatW(L"SNAKE ", L"3 ");
-	wchar_t *snake4a = strcatW(L"SNAKE ", L"4 ");
-	wchar_t *snake1length = new wchar_t[10];
-	wchar_t *snake2length = new wchar_t[10];
-	wchar_t *snake3length = new wchar_t[10];
-	wchar_t *snake4length = new wchar_t[10];
-
-	_itow_s(Snake1size, snake1length, 10, 10);
-	_itow_s(Snake2size, snake2length, 10, 10);
-	_itow_s(Snake3size, snake3length, 10, 10);
-	_itow_s(Snake4size, snake4length, 10, 10);
-	wchar_t *snake1 = strcatW(snake1a, snake1length);
-	wchar_t *snake2 = strcatW(snake2a, snake2length);
-	wchar_t *snake3 = strcatW(snake3a, snake3length);
-	wchar_t *snake4 = strcatW(snake4a, snake4length);
-
-	
-	/*DrawTextOnRend(snake1, wstrlen(snake1), 4, 1240 - CountTextWidth(snake1, wstrlen(snake1), 4), 20);
-	DrawTextOnRend(snake2, wstrlen(snake2), 4, 1240 - CountTextWidth(snake2, wstrlen(snake2), 4), 70);
-	DrawTextOnRend(snake3, wstrlen(snake3), 4, 1240 - CountTextWidth(snake3, wstrlen(snake3), 4), 120);
-	DrawTextOnRend(snake4, wstrlen(snake4), 4, 1240 - CountTextWidth(snake4, wstrlen(snake4), 4), 170);*/
-	DrawTextOnRend(snake1, 4, 25, 20);
-	DrawTextOnRend(snake2, 4, 25, 70);
-	DrawTextOnRend(snake3, 4, 25, 120);
-	DrawTextOnRend(snake4, 4, 25, 170);
-	delete[] snake1length;
-	delete[] snake2length;
-	delete[] snake3length;
-	delete[] snake4length;
-	delete[] snake1;
-	delete[] snake2;
-	delete[] snake3;
-	delete[] snake4;
-	delete[] snake1a;
-	delete[] snake2a;
-	delete[] snake3a;
-	delete[] snake4a;
-	EndDraw();
-}
-
-void Renderer::RenderFrame(std::vector<button>& buttons)
-{
-	BeginDraw();
-	ClearScreen(0.4f, 0.4f, 0.4f);
 
 	for (int i = 0; i < buttons.size(); i++)
 	{
 		RenderButton(buttons[i]);
 	}
-
 	EndDraw();
 }
 
-void Renderer::DrawBitmap(ID2D1Bitmap* bmp, SDL_Rect* rect, SDL_Rect* srcrect)
+void Renderer::DrawBitmap(ID2D1Bitmap* bmp, SDL_Rect* rect, SDL_Rect* srcrect, float opacity)
 {
 	if (rect != NULL && srcrect != NULL)
 	{
 		rendertarget->DrawBitmap(
 			bmp, // Bitmap
 			D2D1::RectF(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h), // Destination rectangle
-			1.0, // Opacity
+			opacity, // Opacity
 			D2D1_BITMAP_INTERPOLATION_MODE::D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
 			D2D1::RectF(srcrect->x, srcrect->y, srcrect->x + srcrect->w, srcrect->y + srcrect->h) // Source rectangle
 		);
@@ -208,7 +179,7 @@ void Renderer::DrawBitmap(ID2D1Bitmap* bmp, SDL_Rect* rect, SDL_Rect* srcrect)
 		rendertarget->DrawBitmap(
 			bmp, // Bitmap
 			D2D1::RectF(rect->x, rect->y, rect->x + rect->w, rect->y + rect->h), // Destination rectangle
-			1.0, // Opacity
+			opacity, // Opacity
 			D2D1_BITMAP_INTERPOLATION_MODE::D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
 			D2D1::RectF(0, 0, bmp->GetPixelSize().width, bmp->GetPixelSize().height) // Source rectangle
 		);
@@ -219,7 +190,7 @@ void Renderer::DrawBitmap(ID2D1Bitmap* bmp, SDL_Rect* rect, SDL_Rect* srcrect)
 		rendertarget->DrawBitmap(
 			bmp, // Bitmap
 			D2D1::RectF(0, 0, srcrect->w, srcrect->h), // Destination rectangle
-			1.0, // Opacity
+			opacity, // Opacity
 			D2D1_BITMAP_INTERPOLATION_MODE::D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
 			D2D1::RectF(srcrect->x, srcrect->y, srcrect->x + srcrect->w, srcrect->y + srcrect->h) // Source rectangle
 		);
@@ -228,7 +199,7 @@ void Renderer::DrawBitmap(ID2D1Bitmap* bmp, SDL_Rect* rect, SDL_Rect* srcrect)
 	rendertarget->DrawBitmap(
 		bmp, // Bitmap
 		D2D1::RectF(0, 0, bmp->GetPixelSize().width, bmp->GetPixelSize().height), // Destination rectangle
-		1.0, // Opacity
+		opacity, // Opacity
 		D2D1_BITMAP_INTERPOLATION_MODE::D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
 		D2D1::RectF(0, 0, bmp->GetPixelSize().width, bmp->GetPixelSize().height) // Source rectangle
 	);
@@ -324,7 +295,7 @@ void Renderer::DrawTextOnRend(const wchar_t* text, int Size, int minX, int minY)
 		rect.x = minX + DrawOffset;
 		rect.w = Size * bitmaps[CurrentCharacterInBitmapsArrayID]->GetPixelSize().width;
 		rect.h = Size * bitmaps[CurrentCharacterInBitmapsArrayID]->GetPixelSize().height;
-		DrawBitmap(bitmaps[CurrentCharacterInBitmapsArrayID], &rect, NULL);
+		DrawBitmap(bitmaps[CurrentCharacterInBitmapsArrayID], &rect, NULL, 0.9f);
 		DrawOffset = DrawOffset + rect.w + Size;
 	}
 }

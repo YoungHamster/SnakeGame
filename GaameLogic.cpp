@@ -600,4 +600,5 @@ int GameLogic::HandleAIForSnake(int SnakeID)
 		return RIGHT;
 	if (canTurnDown)
 		return DOWN;
+	return UP;
 }

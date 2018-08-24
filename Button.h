@@ -10,7 +10,8 @@ struct button
 	AABB EnlargedClickBox;
 	int Size;
 	wchar_t *Text;
-	void(*whattodo)();
+	//void(*whattodo)(Menu *menu);
+	//void(*whattodo)() = NULL;
 };
 
 struct CheckBox

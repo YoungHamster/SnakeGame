@@ -10,7 +10,6 @@
 
 #include "Physics.h"
 //#include "Page.h"
-#include "BitmapHW.h"
 #include "Button.h"
 #include "SDL_Rect.h"
 
@@ -35,14 +34,14 @@ public:
 	void SetGFW_GFH(int GFW, int GFH) { GameFieldWidth = GFW; GameFieldHeigth = GFH; }
 
 	bool Init(HWND windowhandle);
-	void RenderFrame(std::vector<PhysicalObject>& physics, std::vector<button>& buttons, int numberOfObjects, int Snake1size, int Snake2size, int Snake3size, int Snake4size);
-	void RenderFrame(std::vector<button>& buttons);
+	void RenderFrame(std::vector<PhysicalObject>& physics, std::vector<button>& buttons, bool menumode);
+	//void RenderFrame(std::vector<PhysicalObject>& physics, std::vector<button>& buttons);
 
 	void BeginDraw() { rendertarget->BeginDraw(); }
 	void EndDraw() { rendertarget->EndDraw(); }
 	void ClearScreen(float r, float g, float b);
 	bool LoadID2D1Bitmap(LPCWSTR filename, ID2D1Bitmap **ppBitmap);
-	void DrawBitmap(ID2D1Bitmap* bmp, SDL_Rect* rect, SDL_Rect* srcrect);
+	void DrawBitmap(ID2D1Bitmap* bmp, SDL_Rect* rect, SDL_Rect* srcrect, float opacity);
 
 	/* Counts text width in pixels */
 	int CountTextWidth(const wchar_t* text, int Size);

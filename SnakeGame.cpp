@@ -11,6 +11,9 @@
 #include "Renderer.h"
 #endif
 
+bool inmenu = true;
+bool gamerunning = true;
+
 static int tempDir1;
 static int tempDir2;
 HHOOK hhook = NULL;
@@ -19,14 +22,23 @@ int Snake1Length = 5;
 int Snake2Length = 5;
 int Snake3Length = 5;
 int Snake4Length = 5;
+double GameSpeed = 1;
 unsigned int GameFieldWidth = 64;
 unsigned int GameFieldHeight = 36;
 
 LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+bool ComparePoints(POINT p1, POINT p2)
+{
+	if (p1.x == p2.x && p1.y == p2.y)
+		return true;
+	return false;
+}
+
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, int nCmdShow)
 {
+	/* Win api initialization */
 	WNDCLASSEX windowclass;
 	ZeroMemory(&windowclass, sizeof(WNDCLASSEX));
 	windowclass.cbSize = sizeof(WNDCLASSEX);
@@ -49,6 +61,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 	MSG msg;
 	msg.message = WM_NULL;
 
+	/* Game modules initialization */
 	GameLogic game;
 	Renderer rend;
 	Menu menu;
@@ -66,18 +79,28 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 		return -2;
 	}
 	menu.Init(&rend);
-	//rend.SetGFW_GFH(16, 9);
 
-
+	/* Game timer */
 	long lastmovetime = 0;
 	long now = 0;
 	long delta = 0;
 
+	/* Snake directions for user input */
 	int snake1dir = LEFT;
 	int snake2dir = LEFT;
+
+	/* Things for getting cursor position */
+	POINT p;
+	POINT prevp;
+	GetCursorPos(&p);
+	ScreenToClient(windowhandle, &p);
+	prevp = p;
 	
+	/* Keyboard input */
 	hhook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, 0, 0);
-	while (msg.message != WM_QUIT)
+
+	/* Main loop */
+	while (msg.message != WM_QUIT && gamerunning)
 	{
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
@@ -85,42 +108,60 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 		}
 		else
 		{
-			////Sleep(50);
-			////delta = clock() - lastmovetime;
-			///*if (delta >= 16)
-			//{
-			//	int tempdir = ReadInputSnake1();
-			//	if (tempdir != 0)
-			//		snake1dir = tempdir;
-			//	tempdir = ReadInputSnake2();
-			//	if (tempdir != 0)
-			//		snake2dir = tempdir;
-			//}*/
-			////if (delta >= 5)
-			////{
-			//	/*if (tempDir1 > 0 && tempDir1 < 5 && tempDir2 > 0 && tempDir2 < 5)
-			//	{
-			//		snake1dir = tempDir1;
-			//		snake2dir = tempDir2;
-			//	}*/
-			//	//wchar_t str[2];
-			//	//_itow_s(game.snakes[0].size(), str, 2, 10);
-			//	//SetWindowTextW(windowhandle, str);
-			//	game.OneTick(0, 0, 0, 0);
-			//	rend.RenderFrame(game.physics, game.physics.size(), game.snakes[0].size(), game.snakes[1].size(), game.snakes[2].size(), game.snakes[3].size());
-			//	lastmovetime = clock();
-			////}
-			POINT p;
-			GetCursorPos(&p);
-			ScreenToClient(windowhandle, &p);
-			menu.CheckMouseCollision(p);
-			rend.RenderFrame(menu.GetButtonsVectorForRenderer());
-			Sleep(30);
+			if (inmenu)
+			{
+				/* Menu loop */
+				GetCursorPos(&p);
+				ScreenToClient(windowhandle, &p);
+				wchar_t* button = menu.CheckMouseCollision(p, &inmenu, &gamerunning);
+				if (GetAsyncKeyState(VK_LBUTTON) < 0)
+				{
+					if (button == L"START")
+					{
+						game.Reset();
+						game.Init(GameFieldWidth, GameFieldHeight, Snake1Length, Snake2Length, Snake3Length, Snake4Length);
+						inmenu = false;
+					}
+					if (button == L"MULTIPLAYER")
+					{
+						menu.ChangePage(MULTIPLAYER);
+					}
+					if (button == L"OPTIONS")
+					{
+						menu.ChangePage(OPTIONS);
+					}
+					if (button == L"EXIT")
+					{
+						gamerunning = false;
+					}
+				}
+				game.OneTick(0, 0, 0, 0);
+				rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), true);
+				prevp = p;
+				Sleep(50);
+			}
+			else
+			{
+				/* Game loop */
+				//Sleep(50);
+				delta = clock() - lastmovetime;
+				if (delta >= 100 / GameSpeed)
+				{
+					if (tempDir1 > 0 && tempDir1 < 5 && tempDir2 > 0 && tempDir2 < 5)
+					{
+						snake1dir = tempDir1;
+						snake2dir = tempDir2;
+					}
+					game.OneTick(0, 0, 0, 0);
+					rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), false);
+					lastmovetime = clock();
+				}
+			}
 		}
 	}
-
 	return 0;
 }
+
 
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)

@@ -2,7 +2,6 @@
 
 #include <vector>
 
-#include "Physics.h"
 #include "Apple.h"
 
 #define UP 1

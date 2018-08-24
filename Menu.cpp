@@ -28,7 +28,12 @@ void Menu::AddButton(int PageID, bool Clickable, bool Centered, int x, int y, wc
 	pages[PageID].AddButton(Clickable, Centered, x, y, Text, Size, PointedPageID, renderer);
 }
 
-void Menu::CheckMouseCollision(POINT mouse)
+wchar_t* Menu::CheckMouseCollision(POINT mouse, bool *inmenu, bool *gamerunning)
 {
-	pages[CurrentPageID].CheckMouseCollisions(mouse);
+	return pages[CurrentPageID].CheckMouseCollisions(mouse);
+}
+
+void Menu::ChangePage(int PageID)
+{
+	CurrentPageID = PageID;
 }

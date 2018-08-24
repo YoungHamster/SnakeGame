@@ -27,8 +27,9 @@ bool Page::AddButton(button button)
 //	return true;
 //}
 
-void Page::CheckMouseCollisions(POINT mouse)
+wchar_t* Page::CheckMouseCollisions(POINT mouse)
 {
+	int CollidedButton = -1;
 	AABB mousebox;
 	mousebox.min.x = mouse.x;
 	mousebox.min.y = mouse.y;
@@ -36,21 +37,27 @@ void Page::CheckMouseCollisions(POINT mouse)
 	mousebox.max.y = mousebox.min.y + 1;
 	for (int i = 0; i < buttons.size(); i++)
 	{
-		if (AABBvsAABB(mousebox, buttons[i].ClickBox))
+		if (AABBvsAABB(mousebox, buttons[i].ClickBox) && buttons[i].Clickable)
 		{
 			buttons[i].Enlarged = true;
+			CollidedButton = i;
 		}
 		else
 		{
 			buttons[i].Enlarged = false;
 		}
 	}
+	if (CollidedButton != -1)
+	{
+		return buttons[CollidedButton].Text;
+	}
+	return NULL;
 }
 
 bool Page::AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text, int Size, int PointedPageID, Renderer* renderer)
 {
 	button button;
-	button.PointedPageID = PointedPageID;
+	//button.PointedPageID = PointedPageID;
 	button.Clickable = Clickable;
 	button.Centered = Centered;
 	button.Text = Text;
