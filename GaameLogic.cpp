@@ -1,12 +1,18 @@
 #include "GameLogic.h"
 
-bool GameLogic::Init(unsigned int gameFieldHeight, unsigned int gameFieldWidth, int snake1Length, int snake2Length, int snake3Length, int snake4Length)
+void GameLogic::Reset()
 {
-	physics.clear();
 	for (int i = 0; i < 4; i++)
 	{
 		snakes[i].clear();
 	}
+	physics.clear();
+}
+
+bool GameLogic::Init(unsigned int gameFieldWidth, unsigned int gameFieldHeight, int snake1Length, int snake2Length, int snake3Length, int snake4Length)
+{
+	Reset();
+
 	physics.resize(5 + snake1Length + snake2Length + snake3Length + snake4Length);
 	PhysicalObject tempObj;
 	SnakeBlock tempBlock;
@@ -275,6 +281,12 @@ int GameLogic::OneTick(int snake1dir, int snake2dir, int snake3dir, int snake4di
 		else
 			MoveSnake(HandleAIForSnake(3), 3);
 	}
+	if (!snake1alive && !snake2alive && !snake3alive && !snake4alive)
+	{
+		Reset();
+		Init(64, 36, 5, 5, 5, 5);
+		return 1;
+	}
 	//if (snake2alive)
 	//	MoveSnake(snake2dir, 1);
 	//if (snake3alive)
@@ -497,86 +509,6 @@ void GameLogic::KillSnake(int SnakeID)
 	snakes[SnakeID].erase(snakes[SnakeID].begin() + 1, snakes[SnakeID].end());
 }
 
-//int GameLogic::HandleAIForSnake(int SnakeID)
-//{
-//	/*AABB futureSnakePos;
-//	futureSnakePos = physics[snakes[SnakeID][0].PhysicalBodyID].borders;
-//	if (physics[apple.GetPhysicalBodyID()].borders.min.x > physics[snakes[SnakeID][0].PhysicalBodyID].borders.min.x)
-//	{
-//		if (snakes[SnakeID][0].Direction == LEFT)
-//		{
-//			futureSnakePos.min.y = futureSnakePos.max.y;
-//			futureSnakePos.max.y = futureSnakePos.max.y + 1;
-//			if (!CheckCollisionsForAI(futureSnakePos)) return UP;
-//
-//			futureSnakePos.min.y = futureSnakePos.min.y - 2;
-//			futureSnakePos.max.y = futureSnakePos.max.y - 2;
-//			if (!CheckCollisionsForAI(futureSnakePos)) return DOWN;
-//		}
-//		futureSnakePos.min.x = futureSnakePos.max.x;
-//		futureSnakePos.max.x = futureSnakePos.max.x + 1;
-//		if (CheckCollisionsForAI(futureSnakePos)) return UP;
-//		return RIGHT;
-//	}
-//	if (physics[apple.GetPhysicalBodyID()].borders.min.x < physics[snakes[SnakeID][0].PhysicalBodyID].borders.min.x)
-//	{
-//		if (snakes[SnakeID][0].Direction == RIGHT)
-//		{
-//			AABB futureSnakePos;
-//			futureSnakePos = physics[snakes[SnakeID][0].PhysicalBodyID].borders;
-//			futureSnakePos.min.y = futureSnakePos.max.y;
-//			futureSnakePos.max.y = futureSnakePos.max.y + 1;
-//			if (!CheckCollisionsForAI(futureSnakePos)) return UP;
-//
-//			futureSnakePos.min.y = futureSnakePos.min.y - 2;
-//			futureSnakePos.max.y = futureSnakePos.max.y - 2;
-//			if (!CheckCollisionsForAI(futureSnakePos)) return DOWN;
-//		}
-//		futureSnakePos.max.x = futureSnakePos.min.x;
-//		futureSnakePos.min.x = futureSnakePos.min.x - 1;
-//		if (CheckCollisionsForAI(futureSnakePos)) return DOWN;
-//		return LEFT;
-//	}
-//	if (physics[apple.GetPhysicalBodyID()].borders.min.y > physics[snakes[SnakeID][0].PhysicalBodyID].borders.min.y)
-//	{
-//		if (snakes[SnakeID][0].Direction == DOWN)
-//		{
-//			AABB futureSnakePos;
-//			futureSnakePos = physics[snakes[SnakeID][0].PhysicalBodyID].borders;
-//			futureSnakePos.min.x = futureSnakePos.max.x;
-//			futureSnakePos.max.x = futureSnakePos.max.x + 1;
-//			if (!CheckCollisionsForAI(futureSnakePos)) return RIGHT;
-//
-//			futureSnakePos.min.x = futureSnakePos.min.x - 2;
-//			futureSnakePos.max.x = futureSnakePos.max.x - 2;
-//			if (!CheckCollisionsForAI(futureSnakePos)) return LEFT;
-//		}
-//		futureSnakePos.min.y = futureSnakePos.max.y;
-//		futureSnakePos.max.y = futureSnakePos.max.y + 1;
-//		if (CheckCollisionsForAI(futureSnakePos)) return RIGHT;
-//		return UP;
-//	}
-//	if (physics[apple.GetPhysicalBodyID()].borders.min.y < physics[snakes[SnakeID][0].PhysicalBodyID].borders.min.y)
-//	{
-//		if (snakes[SnakeID][0].Direction == UP)
-//		{
-//			AABB futureSnakePos;
-//			futureSnakePos = physics[snakes[SnakeID][0].PhysicalBodyID].borders;
-//			futureSnakePos.min.x = futureSnakePos.max.x;
-//			futureSnakePos.max.x = futureSnakePos.max.x + 1;
-//			if (!CheckCollisionsForAI(futureSnakePos)) return RIGHT;
-//
-//			futureSnakePos.min.x = futureSnakePos.min.x - 2;
-//			futureSnakePos.max.x = futureSnakePos.max.x - 2;
-//			if (!CheckCollisionsForAI(futureSnakePos)) return LEFT;
-//		}
-//		futureSnakePos.max.y = futureSnakePos.min.y;
-//		futureSnakePos.min.x = futureSnakePos.min.y - 1;
-//		if (CheckCollisionsForAI(futureSnakePos)) return LEFT;
-//		return DOWN;
-//	}*/
-//}
-
 int GameLogic::HandleAIForSnake(int SnakeID)
 {
 	bool canTurnUp = true;
@@ -669,4 +601,5 @@ int GameLogic::HandleAIForSnake(int SnakeID)
 		return RIGHT;
 	if (canTurnDown)
 		return DOWN;
+	return UP;
 }

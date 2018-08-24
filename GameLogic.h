@@ -2,7 +2,6 @@
 
 #include <vector>
 
-#include "Physics.h"
 #include "Apple.h"
 
 #define UP 1
@@ -32,7 +31,8 @@ private:
 public:
 	std::vector<PhysicalObject> physics;
 	std::vector<SnakeBlock> snakes[4];
-	bool Init(unsigned int gameFieldHeight, unsigned int gameFieldWidth, int snake1Length, int snake2Length, int snake3Length, int snake4Length);
+	void Reset();
+	bool Init(unsigned int gameFieldWidth, unsigned int gameFieldHeight, int snake1Length, int snake2Length, int snake3Length, int snake4Length);
 	int OneTick(int snake1dir, int snake2dir, int snake3dir, int snake4dir);
 	bool EnlargeSnake(int Length, int SnakeID);
 	bool MoveSnakeBlock(SnakeBlock* block);
