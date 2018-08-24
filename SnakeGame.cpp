@@ -14,8 +14,8 @@
 bool inmenu = true;
 bool gamerunning = true;
 
-static int tempDir1;
-static int tempDir2;
+static int tempDir1 = LEFT;
+static int tempDir2 = LEFT;
 HHOOK hhook = NULL;
 
 int Snake1Length = 5;
@@ -28,6 +28,8 @@ unsigned int GameFieldHeight = 36;
 
 LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+void SortSnakesByLenght(Menu *menu, GameLogic *game);
 
 bool ComparePoints(POINT p1, POINT p2)
 {
@@ -108,16 +110,19 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 		}
 		else
 		{
+			GetCursorPos(&p);
+			ScreenToClient(windowhandle, &p);
+			wchar_t* button = menu.CheckMouseCollision(p, &inmenu, &gamerunning);
 			if (inmenu)
 			{
 				/* Menu loop */
-				GetCursorPos(&p);
-				ScreenToClient(windowhandle, &p);
-				wchar_t* button = menu.CheckMouseCollision(p, &inmenu, &gamerunning);
+				game.OneTick(0, 0, 0, 0);
+				rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), true);
 				if (GetAsyncKeyState(VK_LBUTTON) < 0)
 				{
 					if (button == L"START")
 					{
+						menu.ChangePage(3);
 						game.Reset();
 						game.Init(GameFieldWidth, GameFieldHeight, Snake1Length, Snake2Length, Snake3Length, Snake4Length);
 						inmenu = false;
@@ -134,25 +139,43 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 					{
 						gamerunning = false;
 					}
+					if (button == L"BACK")
+					{
+						menu.ChangePage(0);
+						rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), true);
+						Sleep(200);
+					}
 				}
-				game.OneTick(0, 0, 0, 0);
-				rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), true);
 				prevp = p;
 				Sleep(50);
 			}
 			else
 			{
+				if (button == L"BACK TO MAIN MENU" && GetAsyncKeyState(VK_LBUTTON) < 0)
+				{
+					snake1dir = LEFT;
+					snake2dir = LEFT;
+					tempDir1 = LEFT;
+					tempDir2 = LEFT;
+					menu.ChangePage(0);
+					inmenu = true;
+				}
 				/* Game loop */
-				//Sleep(50);
+				Sleep(100 / GameSpeed / 2);
 				delta = clock() - lastmovetime;
 				if (delta >= 100 / GameSpeed)
 				{
-					if (tempDir1 > 0 && tempDir1 < 5 && tempDir2 > 0 && tempDir2 < 5)
+					//if (tempDir1 > 0 && tempDir1 < 5 && tempDir2 > 0 && tempDir2 < 5)
+					if(tempDir1 > 0 && tempDir1 < 5)
 					{
 						snake1dir = tempDir1;
+					}
+					if (tempDir2 > 0 && tempDir2 < 5)
+					{
 						snake2dir = tempDir2;
 					}
-					game.OneTick(0, 0, 0, 0);
+					game.OneTick(snake2dir, snake1dir, 0, 0);
+					SortSnakesByLenght(&menu, &game);
 					rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), false);
 					lastmovetime = clock();
 				}
@@ -162,7 +185,52 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 	return 0;
 }
 
+struct cnake
+{
+	int lenght;
+	wchar_t* name;
+};
 
+void SortSnakesByLenght(Menu *menu, GameLogic *game)
+{
+	cnake lenghts[4];
+	for (int i = 0; i < 4; i++)
+	{
+		lenghts[i].lenght = game->snakes[i].size();
+	}
+	lenghts[0].name = const_cast<wchar_t*>(L"BLUE");
+	lenghts[1].name = const_cast<wchar_t*>(L"GREEN");
+	lenghts[2].name = const_cast<wchar_t*>(L"YELLOW");
+	lenghts[3].name = const_cast<wchar_t*>(L"VIOLET");
+	for (int i = 0; i < 4; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			if (lenghts[i].lenght > lenghts[j].lenght)
+			{
+				cnake bigger = lenghts[i];
+				lenghts[i] = lenghts[j];
+				lenghts[j] = bigger;
+			}
+		}
+	}
+	std::wstring str1(L"1ST ");
+	str1 += std::wstring(lenghts[0].name);
+	menu->ChangeButtonText(3, 1, const_cast<wchar_t*>(str1.c_str()));
+	std::wstring str2(L"2ND ");
+	str2 += std::wstring(lenghts[1].name);
+	menu->ChangeButtonText(3, 2, const_cast<wchar_t*>(str2.c_str()));
+	std::wstring str3(L"3RD ");
+	str3 += std::wstring(lenghts[2].name);
+	menu->ChangeButtonText(3, 3, const_cast<wchar_t*>(str3.c_str()));
+	std::wstring str4(L"4TH ");
+	str4 += std::wstring(lenghts[3].name);
+	menu->ChangeButtonText(3, 4, const_cast<wchar_t*>(str4.c_str()));
+	/*menu->ChangeButtonText(3, 1, const_cast<wchar_t*>(str1.c_str()));
+	menu->ChangeButtonText(3, 1, strcatW(L"2ND ", lenghts[1].name));
+	menu->ChangeButtonText(3, 1, strcatW(L"3RD ", lenghts[2].name));
+	menu->ChangeButtonText(3, 1, strcatW(L"4TH ", lenghts[3].name));*/
+}
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -187,18 +255,6 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 		OutputDebugString(C);*/
 		switch (pkbs->vkCode)
 		{
-		case VK_UP:
-			tempDir2 = UP;
-			break;
-		case VK_DOWN:
-			tempDir2 = DOWN;
-			break;
-		case VK_LEFT:
-			tempDir2 = LEFT;
-			break;
-		case VK_RIGHT:
-			tempDir2 = RIGHT;
-			break;
 		case 0x57:
 			tempDir1 = UP;
 			break;
@@ -210,6 +266,18 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 			break;
 		case 0x44:
 			tempDir1 = RIGHT;
+			break;
+		case VK_UP:
+			tempDir2 = UP;
+			break;
+		case VK_DOWN:
+			tempDir2 = DOWN;
+			break;
+		case VK_LEFT:
+			tempDir2 = LEFT;
+			break;
+		case VK_RIGHT:
+			tempDir2 = RIGHT;
 			break;
 		}
 	}

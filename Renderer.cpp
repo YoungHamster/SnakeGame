@@ -131,7 +131,7 @@ void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, std::vector<but
 		backgroundR = 0.4f;
 		backgroundG = 0.5f;
 		backgroundB = 0.4f;
-		opacity = 1.0f;
+		opacity = 0.7f;
 	}
 
 	int renderWidth = this->rendertarget->GetPixelSize().width;
@@ -280,7 +280,7 @@ bool Renderer::LoadID2D1Bitmap(LPCWSTR filename, ID2D1Bitmap **ppBitmap)
 void Renderer::DrawTextOnRend(const wchar_t* text, int Size, int minX, int minY)
 {
 	int DrawOffset = 0;
-	int CurrentCharacterInBitmapsArrayID;
+	int CurrentCharacterInBitmapsArrayID = 77;
 	SDL_Rect rect;
 	rect.y = minY;
 	for (int i = 0; i < wstrlen(text); i++)

@@ -27,6 +27,34 @@ bool Page::AddButton(button button)
 //	return true;
 //}
 
+bool Page::AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text, int Size, Renderer* renderer)
+{
+	button button;
+	button.Clickable = Clickable;
+	button.Centered = Centered;
+	button.Text = Text;
+	AABB box;
+	if (!Centered)
+	{
+		box.min.x = x;
+	}
+	else
+	{
+		box.min.x = 1280 / 2 - renderer->CountTextWidth(Text, Size) / 2;
+	}
+	box.min.y = y;
+	box.max.x = box.min.x + renderer->CountTextWidth(Text, Size);
+	box.max.y = box.min.y + 8 * Size;
+	button.Size = Size;
+	button.ClickBox = box;
+	button.EnlargedClickBox.min.x = button.ClickBox.min.x - Size;
+	button.EnlargedClickBox.min.y = button.ClickBox.min.y - Size;
+	button.EnlargedClickBox.max.x = button.ClickBox.max.x + Size;
+	button.EnlargedClickBox.max.y = button.ClickBox.max.y + Size;
+	buttons.push_back(button);
+	return true;
+}
+
 wchar_t* Page::CheckMouseCollisions(POINT mouse)
 {
 	int CollidedButton = -1;
@@ -52,33 +80,4 @@ wchar_t* Page::CheckMouseCollisions(POINT mouse)
 		return buttons[CollidedButton].Text;
 	}
 	return NULL;
-}
-
-bool Page::AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text, int Size, int PointedPageID, Renderer* renderer)
-{
-	button button;
-	//button.PointedPageID = PointedPageID;
-	button.Clickable = Clickable;
-	button.Centered = Centered;
-	button.Text = Text;
-	AABB box;
-	if (!Centered)
-	{
-		box.min.x = x;
-	}
-	else
-	{
-		box.min.x = 1280 / 2 - renderer->CountTextWidth(Text, Size) / 2;
-	}
-	box.min.y = y;
-	box.max.x = box.min.x + renderer->CountTextWidth(Text, Size);
-	box.max.y = box.min.y + 8 * Size;
-	button.Size = Size;
-	button.ClickBox = box;
-	button.EnlargedClickBox.min.x = button.ClickBox.min.x - Size;
-	button.EnlargedClickBox.min.y = button.ClickBox.min.y - Size;
-	button.EnlargedClickBox.max.x = button.ClickBox.max.x + Size;
-	button.EnlargedClickBox.max.y = button.ClickBox.max.y + Size;
-	buttons.push_back(button);
-	return true;
 }

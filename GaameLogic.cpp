@@ -285,6 +285,7 @@ int GameLogic::OneTick(int snake1dir, int snake2dir, int snake3dir, int snake4di
 	{
 		Reset();
 		Init(64, 36, 5, 5, 5, 5);
+		return 1;
 	}
 	//if (snake2alive)
 	//	MoveSnake(snake2dir, 1);
