@@ -73,10 +73,14 @@ void NetworkEngine::Handshake(connection client, GameRoom *firstRoom)
 	wchar_t* nickname = new wchar_t[nicknamelenght / 2];
 	for (int i = 0; i < nicknamelenght / 2; i++)
 	{
-		nickname[i] = 0;
+		/*nickname[i] = 0;
 		nickname[i] |= buff[i + 1];
 		nickname[i] <<= 8;
-		nickname[i] |= buff[i + 2];
+		nickname[i] |= buff[i + 2];*/
+		WcharToBytes nicknameConv;
+		nicknameConv.bytes[0] = buff[i + 1];
+		nicknameConv.bytes[1] = buff[i + 2];
+		nickname[i] = nicknameConv.wchar;
 	}
 
 	/* Respone */
@@ -86,14 +90,12 @@ void NetworkEngine::Handshake(connection client, GameRoom *firstRoom)
 	client.uuid <<= 32;
 	client.uuid |= randNum();
 	buff[0] = '\x01';
-	//std::bitset<64> uuid(client.uuid);
-	//std::cout << uuid << std::endl;
+	ULLToBytes uuidConv;
+	uuidConv.integer = client.uuid;
 	for (int i = 0; i < 8; i++)
 	{
 		
-		buff[i + 1] = client.uuid >> (i * 8);
-		//std::cout << (int)buff[i + 1] << std::endl;
-		//std::cout << std::bitset<8>(buff[i + 1]) << std::endl;
+		buff[i + 1] = uuidConv.bytes[i];
 	}
 	if (AnyActiveRooms(firstRoom))
 	{
@@ -101,14 +103,14 @@ void NetworkEngine::Handshake(connection client, GameRoom *firstRoom)
 		room = firstRoom;
 		for (int i = 0; i < 250; i++, room++)
 		{
-			/*buff[10 + i * sizeof(int)] = room->urid;
-			buff[11 + i * sizeof(int)] = room->urid >> 8;
-			buff[12 + i * sizeof(int)] = room->urid >> 16;
-			buff[13 + i * sizeof(int)] = room->urid >> 24;*/
-			//BytesToInt(&buff[10 + i * sizeof(int)], &room->URID);
 			if (room->roomActive)
 			{
-				IntToBytes(&buff[10 + i * sizeof(int)], &room->URID);
+				IntToBytes URIDconv;
+				URIDconv.integer = room->URID;
+				buff[10 + i * sizeof(int)] = URIDconv.bytes[0];
+				buff[11 + i * sizeof(int)] = URIDconv.bytes[1];
+				buff[12 + i * sizeof(int)] = URIDconv.bytes[2];
+				buff[13 + i * sizeof(int)] = URIDconv.bytes[3];
 				buff[14 + i * sizeof(int)] = '\0';
 				bufflenght = 14 + i * sizeof(int);
 			}
@@ -136,7 +138,12 @@ void NetworkEngine::Handshake(connection client, GameRoom *firstRoom)
 		std::cout << "Recently connected client data: nickname - " << client.nickname << " uuid - " << client.uuid << " room id - " << newroom.URID << std::endl;
 		room = NewRoom(newroom, firstRoom);
 		buff[0] = '\x03';
-		IntToBytes(&buff[1], &room->URID);
+		IntToBytes i2b;
+		i2b.integer = room->URID;
+		buff[1] = i2b.bytes[0];
+		buff[2] = i2b.bytes[1];
+		buff[3] = i2b.bytes[2];
+		buff[4] = i2b.bytes[3];
 		buff[5] = '\0';
 		send(client.connectSock, buff, 6, NULL);
 		std::thread NewRoom(AsyncRoomThr, room);
@@ -147,26 +154,18 @@ void NetworkEngine::Handshake(connection client, GameRoom *firstRoom)
 	}
 	if (buff[1] == '\x02')
 	{
-		int urid;
-		/*urid |= buff[2];
-		urid <<= 8;
-		urid |= buff[3];
-		urid <<= 8;
-		urid |= buff[4];
-		urid <<= 8;
-		urid |= buff[5];*/
-		BytesToInt(&buff[2], &urid);
+		IntToBytes i2b;
+		i2b.bytes[0] = buff[2];
+		i2b.bytes[1] = buff[3];
+		i2b.bytes[2] = buff[4];
+		i2b.bytes[3] = buff[5];
+		//BytesToInt(&buff[2], &urid);
 		room = firstRoom;
 		for (int i = 0; i < 1000; i++, room++)
 		{
-			if (room->URID == urid)
+			if (room->URID == i2b.integer)
 			{
 				buff[0] = '\x03';
-				/*buff[1] = room->urid;
-				buff[2] = room->urid >> 8;
-				buff[3] = room->urid >> 16;
-				buff[4] = room->urid >> 24;*/
-				IntToBytes(&buff[1], &room->URID);
 				buff[5] = '\0';
 				int newclientid = room->ConnectPlayer(client);
 				send(client.connectSock, buff, 6, NULL);
@@ -242,6 +241,7 @@ void NetworkEngine::AsyncUserConnectionThr(GameRoom *room, connection *player)
 						std::cout << "Pizdec from user with uuid: " << player->uuid << std::endl;
 						player->connected = false;
 						closesocket(player->connectSock);
+						if (!room->AnyConnectedPlayers()) room->roomActive = false;
 					}
 					continue;
 				}
@@ -251,6 +251,7 @@ void NetworkEngine::AsyncUserConnectionThr(GameRoom *room, connection *player)
 				std::cout << "Pizdec from user with uuid: " << player->uuid << std::endl;
 				player->connected = false;
 				closesocket(player->connectSock);
+				if (!room->AnyConnectedPlayers()) room->roomActive = false;
 			}
 			//player->votedForStart = false;
 			continue;
@@ -262,12 +263,12 @@ void NetworkEngine::AsyncUserConnectionThr(GameRoom *room, connection *player)
 				switch (buff[1])
 				{
 				case '\0':
-					SendPhysicsToClient(player, room->GetPhysicsForPlayer());
+					SendPhysicsToClient(room, player, room->GetPhysicsForPlayer());
 					continue;
 					break;
 				default:
 					room->ChangePlayerDirection(buff[1], player);
-					SendPhysicsToClient(player, room->GetPhysicsForPlayer());
+					SendPhysicsToClient(room, player, room->GetPhysicsForPlayer());
 					continue;
 					break;
 				}
@@ -278,6 +279,7 @@ void NetworkEngine::AsyncUserConnectionThr(GameRoom *room, connection *player)
 				std::cout << "Pizdec from user with uuid: " << player->uuid << std::endl;
 				player->connected = false;
 				closesocket(player->connectSock);
+				if (!room->AnyConnectedPlayers()) room->roomActive = false;
 			}
 			continue;
 		}
@@ -286,16 +288,18 @@ void NetworkEngine::AsyncUserConnectionThr(GameRoom *room, connection *player)
 			std::cout << "Pizdec packet '\xff' from user with uuid: " << player->uuid << std::endl;
 			player->connected = false;
 			closesocket(player->connectSock);
+			if (!room->AnyConnectedPlayers()) room->roomActive = false;
 			continue;
 		}
 		player->connected = false;
 		closesocket(player->connectSock);
+		if(!room->AnyConnectedPlayers()) room->roomActive = false;
 		/*player = NULL;*/
 		std::cout << "Pizdec\n";
 	}
 }
 
-void NetworkEngine::SendPhysicsToClient(connection *client, std::vector<PhysicalObject>& physics)
+void NetworkEngine::SendPhysicsToClient(GameRoom *room, connection *client, std::vector<PhysicalObject>& physics)
 {
 	int physicssize = physics.size();
 	//char* physicsbuff = new char[physicssize * sizeof(PhysicalObject) + 1];
@@ -303,33 +307,13 @@ void NetworkEngine::SendPhysicsToClient(connection *client, std::vector<Physical
 	physicsbuff[0] = '\0f';
 	for (int i = 1; i <= physicssize; i++)
 	{
-		PhysicalObjectToBytesConverter conv;
+		PhysicalObjectToBytes conv;
 		conv.obj = physics[i - 1];
 		for (int j = 0; j < sizeof(PhysicalObject); j++)
 		{
 			physicsbuff[i * sizeof(PhysicalObject) + j] = conv.bytes[j];
 			
 		}
-		/*physicsbuff[i * sizeof(PhysicalObject)] = physics[i].type;
-		physicsbuff[i * sizeof(PhysicalObject) + 1] = physics[i].type >> 8;
-		physicsbuff[i * sizeof(PhysicalObject) + 2] = physics[i].type >> 16;
-		physicsbuff[i * sizeof(PhysicalObject) + 3] = physics[i].type >> 24;
-		physicsbuff[i * sizeof(PhysicalObject) + 4] = physics[i].borders.max.x;
-		physicsbuff[i * sizeof(PhysicalObject) + 5] = physics[i].borders.max.x >> 8;
-		physicsbuff[i * sizeof(PhysicalObject) + 6] = physics[i].borders.max.x >> 16;
-		physicsbuff[i * sizeof(PhysicalObject) + 7] = physics[i].borders.max.x >> 24;
-		physicsbuff[i * sizeof(PhysicalObject) + 8] = physics[i].borders.max.y;
-		physicsbuff[i * sizeof(PhysicalObject) + 9] = physics[i].borders.max.y >> 8;
-		physicsbuff[i * sizeof(PhysicalObject) + 10] = physics[i].borders.min.y >> 16;
-		physicsbuff[i * sizeof(PhysicalObject) + 12] = physics[i].borders.min.y >> 24;
-		physicsbuff[i * sizeof(PhysicalObject) + 13] = physics[i].borders.min.x;
-		physicsbuff[i * sizeof(PhysicalObject) + 14] = physics[i].borders.min.x >> 8;
-		physicsbuff[i * sizeof(PhysicalObject) + 15] = physics[i].borders.min.x >> 16;
-		physicsbuff[i * sizeof(PhysicalObject) + 16] = physics[i].borders.min.x >> 24;
-		physicsbuff[i * sizeof(PhysicalObject) + 17] = physics[i].borders.min.y;
-		physicsbuff[i * sizeof(PhysicalObject) + 18] = physics[i].borders.min.y >> 8;
-		physicsbuff[i * sizeof(PhysicalObject) + 19] = physics[i].borders.min.y >> 16;
-		physicsbuff[i * sizeof(PhysicalObject) + 20] = physics[i].borders.min.y >> 24;*/
 	}
 	while (client->RecvedPhysics)
 	{
@@ -340,6 +324,7 @@ void NetworkEngine::SendPhysicsToClient(connection *client, std::vector<Physical
 		std::cout << "Pizdec from user with uuid: " << client->uuid << std::endl;
 		client->connected = false;
 		closesocket(client->connectSock);
+		if (!room->AnyConnectedPlayers()) room->roomActive = false;
 	}
 	//delete[] physicsbuff;
 }
@@ -394,32 +379,6 @@ unsigned int NetworkEngine::randNum()
 	std::mt19937 gen(rd());
 	//std::uniform_int_distribution<> dist(min, max);
 	return gen();
-}
-
-void NetworkEngine::IntToBytes(char *firstByte, int *integer)
-{
-	*firstByte = *integer;
-	firstByte++;
-	*firstByte = *integer >> 8;
-	firstByte++;
-	*firstByte = *integer >> 16;
-	firstByte++;
-	*firstByte = *integer >> 24;
-}
-
-void NetworkEngine::BytesToInt(char *firstByte, int *integer)
-{
-	*integer= 0;
-	*integer |= *firstByte;
-	*integer <<= 8;
-	firstByte++;
-	*integer |= *firstByte;
-	*integer <<= 8;
-	firstByte++;
-	*integer |= *firstByte;
-	*integer <<= 8;
-	firstByte++;
-	*integer |= *firstByte;
 }
 
 void NetworkEngine::ZeroBuff(char *firstByte, int sizeOfBuff)

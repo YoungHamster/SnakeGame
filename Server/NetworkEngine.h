@@ -6,7 +6,6 @@
 #include <iostream>
 #include <thread>
 #include <vector>
-#include <bitset>
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #pragma comment(lib, "Ws2_32.lib")
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -17,10 +16,28 @@
 
 static bool serverrunning = true;
 
-union PhysicalObjectToBytesConverter
+union PhysicalObjectToBytes
 {
 	PhysicalObject obj;
 	char bytes[sizeof(PhysicalObject)];
+};
+
+union ULLToBytes
+{
+	unsigned long long integer;
+	char bytes[8];
+};
+
+union IntToBytes
+{
+	int integer;
+	char bytes[4];
+};
+
+union WcharToBytes
+{
+	wchar_t wchar;
+	char bytes[2];
 };
 
 class NetworkEngine
@@ -40,10 +57,8 @@ public:
 	static bool AnyActiveRooms(GameRoom *firstRoom);
 	static void AsyncRoomThr(GameRoom *room);
 	static void AsyncUserConnectionThr(GameRoom *room, connection *player);
-	static void SendPhysicsToClient(connection *client, std::vector<PhysicalObject>& physics);
+	static void SendPhysicsToClient(GameRoom *room, connection *client, std::vector<PhysicalObject>& physics);
 	static const char* WSAErrorToString();
 	static unsigned int randNum();
-	static void IntToBytes(char *firstByte, int *integer);
-	static void BytesToInt(char *firstByte, int *integer);
 	static void ZeroBuff(char *firstByte, int sizeOfBuff);
 };
