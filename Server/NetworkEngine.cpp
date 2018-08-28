@@ -23,49 +23,46 @@ bool NetworkEngine::Init()
 	return true;
 }
 
-void NetworkEngine::AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, connection *connections, int maxconnnumber, GameRoom *rooms)
+void NetworkEngine::AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, connection *connections, int maxconnnumber, GameRoom *firstRoom)
 {
 	connection *firstconnection = connections;
 	int addrlen = sizeof(address);
 	SOCKET connectSock;
+	connection newPlayer;
 	while (serverrunning)
 	{
-		connections = firstconnection;
-		for (int i = 0; i < maxconnnumber; i++, connections++)
+		newPlayer.connected = false;
+		if (newPlayer.connectSock = accept(listenSock, (SOCKADDR*)&address, &addrlen))
 		{
-			if (!connections->connected)
+			if (newPlayer.connectSock != INVALID_SOCKET)
 			{
-				if (connectSock = accept(listenSock, (SOCKADDR*)&address, &addrlen))
-				{
-					if (connectSock != INVALID_SOCKET)
-					{
-						connections->connected = true;
-						connections->connectSock = connectSock;
-						std::cout << "Connection was found:" << inet_ntoa(address.sin_addr) << ':' << address.sin_port << std::endl;
-						std::thread handshake(Handshake, connections, rooms);
-						handshake.detach();
-					}
-					else
-					{
-						std::cout << "accept() function error: " << WSAErrorToString() << std::endl;
-					}
-				}
+				newPlayer.connected = true;
+				std::cout << "Connection was found:" << inet_ntoa(address.sin_addr) << ':' << address.sin_port << std::endl;
+				std::thread handshake(Handshake, newPlayer, firstRoom);
+				handshake.detach();
+			}
+			else
+			{
+				std::cout << "accept() function error: " << WSAErrorToString() << std::endl;
 			}
 		}
-		std::cout << "10000 connections was found!!!" << std::endl;
+		//std::cout << "10000 connections was found!!!" << std::endl;
 	}
 }
 
-void NetworkEngine::Handshake(connection *client, GameRoom *firstRoom)
+void NetworkEngine::Handshake(connection client, GameRoom *firstRoom)
 {
 	GameRoom *room = firstRoom;
 	int nicknamelenght = 0;
 	char buff[1500];
-	recv(client->connectSock, buff, sizeof(buff), NULL);
+	ZeroBuff(&buff[0], 1500);
+
+	recv(client.connectSock, buff, sizeof(buff), NULL);
 	if (buff[0] != '\x01')
 	{
-		closesocket(client->connectSock);
-		client->connected = false;
+		std::cout << "pizdets" << std::endl;
+		closesocket(client.connectSock);
+		client.connected = false;
 		return;
 	}
 	for (int i = 0; i < sizeof(buff); i++)
@@ -81,20 +78,28 @@ void NetworkEngine::Handshake(connection *client, GameRoom *firstRoom)
 		nickname[i] <<= 8;
 		nickname[i] |= buff[i + 2];
 	}
-	client->nickname = nickname;
-	client->uuid |= randNum();
-	client->uuid <<= 32;
-	client->uuid |= randNum();
+
+	/* Respone */
+	int bufflenght = 9;
+	client.nickname = nickname;
+	client.uuid |= randNum();
+	client.uuid <<= 32;
+	client.uuid |= randNum();
 	buff[0] = '\x01';
+	//std::bitset<64> uuid(client.uuid);
+	//std::cout << uuid << std::endl;
 	for (int i = 0; i < 8; i++)
 	{
-		buff[i + 1] = client->uuid >> (1 + i) * 8;
+		
+		buff[i + 1] = client.uuid >> (i * 8);
+		//std::cout << (int)buff[i + 1] << std::endl;
+		//std::cout << std::bitset<8>(buff[i + 1]) << std::endl;
 	}
 	if (AnyActiveRooms(firstRoom))
 	{
 		buff[9] = '\x02';
 		room = firstRoom;
-		for (int i = 0; i < 250; i++)
+		for (int i = 0; i < 250; i++, room++)
 		{
 			/*buff[10 + i * sizeof(int)] = room->urid;
 			buff[11 + i * sizeof(int)] = room->urid >> 8;
@@ -105,7 +110,7 @@ void NetworkEngine::Handshake(connection *client, GameRoom *firstRoom)
 			{
 				IntToBytes(&buff[10 + i * sizeof(int)], &room->URID);
 				buff[14 + i * sizeof(int)] = '\0';
-				room++;
+				bufflenght = 14 + i * sizeof(int);
 			}
 		}
 	}
@@ -113,27 +118,29 @@ void NetworkEngine::Handshake(connection *client, GameRoom *firstRoom)
 	{
 		buff[9] = '\0';
 	}
-	send(client->connectSock, buff, sizeof(buff), NULL);
-
-	recv(client->connectSock, buff, sizeof(buff), NULL);
+	send(client.connectSock, buff, bufflenght, NULL);
+	
+	/* Get */
+	ZeroBuff(&buff[0], 1500);
+	recv(client.connectSock, buff, sizeof(buff), NULL);
 	if (buff[0] != '\x02')
 	{
-		closesocket(client->connectSock);
-		client->connected = false;
+		closesocket(client.connectSock);
+		client.connected = false;
 		return;
 	}
 	if (buff[1] == '\x01')
 	{
 		GameRoom newroom;
 		newroom.Init(client);
-		std::cout << "Recently connected client data: nickname - " << client->nickname << " uuid - " << client->uuid << " room id - " << newroom.URID << '\n';
+		std::cout << "Recently connected client data: nickname - " << client.nickname << " uuid - " << client.uuid << " room id - " << newroom.URID << std::endl;
 		room = NewRoom(newroom, firstRoom);
 		buff[0] = '\x03';
 		IntToBytes(&buff[1], &room->URID);
 		buff[5] = '\0';
-		send(client->connectSock, buff, 6, NULL);
+		send(client.connectSock, buff, 6, NULL);
 		std::thread NewRoom(AsyncRoomThr, room);
-		std::thread newPlayer(AsyncUserConnectionThr, room, client);
+		std::thread newPlayer(AsyncUserConnectionThr, room, &room->players[0]);
 		newPlayer.detach();
 		NewRoom.detach();
 		return;
@@ -150,7 +157,7 @@ void NetworkEngine::Handshake(connection *client, GameRoom *firstRoom)
 		urid |= buff[5];*/
 		BytesToInt(&buff[2], &urid);
 		room = firstRoom;
-		for (int i = 0; i < 250; i++)
+		for (int i = 0; i < 1000; i++, room++)
 		{
 			if (room->URID == urid)
 			{
@@ -161,18 +168,18 @@ void NetworkEngine::Handshake(connection *client, GameRoom *firstRoom)
 				buff[4] = room->urid >> 24;*/
 				IntToBytes(&buff[1], &room->URID);
 				buff[5] = '\0';
-				send(client->connectSock, buff, 6, NULL);
-				room->ConnectPlayer(client);
-				std::thread newPlayer(AsyncUserConnectionThr, room, client);
+				int newclientid = room->ConnectPlayer(client);
+				send(client.connectSock, buff, 6, NULL);
+				std::cout << L"Recently connected client data: nickname - " << client.nickname << L" uuid - " << client.uuid << " room id - " << room->URID << std::endl;
+				std::thread newPlayer(AsyncUserConnectionThr, room, &room->players[newclientid]);
 				newPlayer.detach();
-				std::wcout << L"Recently connected client data: nickname - " << client->nickname << L" uuid - " << client->uuid << " room id - " << urid << std::endl;
 				return;
 			}
-			room += sizeof(GameRoom);
 		}
 	}
-	client->connected = false;
-	closesocket(client->connectSock);
+	std::cout << "pizdets\n";
+	client.connected = false;
+	closesocket(client.connectSock);
 }
 
 GameRoom* NetworkEngine::NewRoom(GameRoom newroom, GameRoom* firstRoom)
@@ -218,32 +225,39 @@ void NetworkEngine::AsyncRoomThr(GameRoom *room)
 void NetworkEngine::AsyncUserConnectionThr(GameRoom *room, connection *player)
 {
 	char buff[1500];
-	while (serverrunning && player->connected)
+	ZeroBuff(&buff[0], sizeof(buff));
+	while (serverrunning && player->connected && room->roomActive)
 	{
+		Sleep(10);
 		recv(player->connectSock, buff, sizeof(buff), NULL);
 		if (buff[0] == '\x04')
 		{
 			player->votedForStart = true;
 			for (int i = 0; i < 4; i++)
 			{
-				if (((room->players[i] != NULL) ? room->players[i]->connected : false) && !room->votedForStart[i])
+				if (room->players[i].connected && !room->players[i].votedForStart)
 				{
-					send(player->connectSock, "\x05", 1, NULL);
+					if (send(player->connectSock, "\x05", 1, NULL) <= 0)
+					{
+						std::cout << "Pizdec from user with uuid: " << player->uuid << std::endl;
+						player->connected = false;
+						closesocket(player->connectSock);
+					}
 					continue;
 				}
 			}
-			if (send(player->connectSock, "\x04", 1, NULL) == -1)
+			if (send(player->connectSock, "\x04", 1, NULL) <= 0)
 			{
 				std::cout << "Pizdec from user with uuid: " << player->uuid << std::endl;
 				player->connected = false;
 				closesocket(player->connectSock);
 			}
-			player->votedForStart = false;
+			//player->votedForStart = false;
 			continue;
 		}
 		if (buff[0] == '\x07')
 		{
-			if (room->roomActive)
+			if (room->matchRunning)
 			{
 				switch (buff[1])
 				{
@@ -260,6 +274,7 @@ void NetworkEngine::AsyncUserConnectionThr(GameRoom *room, connection *player)
 			}
 			if(send(player->connectSock, "\x08", 1, NULL) == -1)
 			{
+				room->matchRunning = false;
 				std::cout << "Pizdec from user with uuid: " << player->uuid << std::endl;
 				player->connected = false;
 				closesocket(player->connectSock);
@@ -276,17 +291,26 @@ void NetworkEngine::AsyncUserConnectionThr(GameRoom *room, connection *player)
 		player->connected = false;
 		closesocket(player->connectSock);
 		/*player = NULL;*/
-		Sleep(10);
+		std::cout << "Pizdec\n";
 	}
 }
 
 void NetworkEngine::SendPhysicsToClient(connection *client, std::vector<PhysicalObject>& physics)
 {
-	char* physicsbuff = new char[physics.size() * sizeof(PhysicalObject) + 1];
+	int physicssize = physics.size();
+	//char* physicsbuff = new char[physicssize * sizeof(PhysicalObject) + 1];
+	char physicsbuff[46080];
 	physicsbuff[0] = '\0f';
-	for (int i = 1; i < physics.size(); i++)
+	for (int i = 1; i <= physicssize; i++)
 	{
-		physicsbuff[i * sizeof(PhysicalObject)] = physics[i].type;
+		PhysicalObjectToBytesConverter conv;
+		conv.obj = physics[i - 1];
+		for (int j = 0; j < sizeof(PhysicalObject); j++)
+		{
+			physicsbuff[i * sizeof(PhysicalObject) + j] = conv.bytes[j];
+			
+		}
+		/*physicsbuff[i * sizeof(PhysicalObject)] = physics[i].type;
 		physicsbuff[i * sizeof(PhysicalObject) + 1] = physics[i].type >> 8;
 		physicsbuff[i * sizeof(PhysicalObject) + 2] = physics[i].type >> 16;
 		physicsbuff[i * sizeof(PhysicalObject) + 3] = physics[i].type >> 24;
@@ -305,18 +329,19 @@ void NetworkEngine::SendPhysicsToClient(connection *client, std::vector<Physical
 		physicsbuff[i * sizeof(PhysicalObject) + 17] = physics[i].borders.min.y;
 		physicsbuff[i * sizeof(PhysicalObject) + 18] = physics[i].borders.min.y >> 8;
 		physicsbuff[i * sizeof(PhysicalObject) + 19] = physics[i].borders.min.y >> 16;
-		physicsbuff[i * sizeof(PhysicalObject) + 20] = physics[i].borders.min.y >> 24;
+		physicsbuff[i * sizeof(PhysicalObject) + 20] = physics[i].borders.min.y >> 24;*/
 	}
 	while (client->RecvedPhysics)
 	{
 		Sleep(1);
 	}
-	if (send(client->connectSock, physicsbuff, physics.size() * sizeof(PhysicalObject) + 1, NULL) <= 0)
+	if (send(client->connectSock, physicsbuff, physicssize * sizeof(PhysicalObject) + 1, NULL) <= 0)
 	{
 		std::cout << "Pizdec from user with uuid: " << client->uuid << std::endl;
 		client->connected = false;
 		closesocket(client->connectSock);
 	}
+	//delete[] physicsbuff;
 }
 
 const char* NetworkEngine::WSAErrorToString()
@@ -395,4 +420,12 @@ void NetworkEngine::BytesToInt(char *firstByte, int *integer)
 	*integer <<= 8;
 	firstByte++;
 	*integer |= *firstByte;
+}
+
+void NetworkEngine::ZeroBuff(char *firstByte, int sizeOfBuff)
+{
+	for (int i = 0; i < sizeOfBuff; i++, firstByte++)
+	{
+		*firstByte = '\0';
+	}
 }

@@ -6,6 +6,7 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <bitset>
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #pragma comment(lib, "Ws2_32.lib")
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -15,6 +16,12 @@
 #include "connection.h"
 
 static bool serverrunning = true;
+
+union PhysicalObjectToBytesConverter
+{
+	PhysicalObject obj;
+	char bytes[sizeof(PhysicalObject)];
+};
 
 class NetworkEngine
 {
@@ -27,8 +34,8 @@ private:
 	GameRoom rooms[1000];
 public:
 	bool Init();
-	static void AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, connection *connections, int maxconnnumber, GameRoom *rooms);
-	static void Handshake(connection *client, GameRoom *firstRoom);
+	static void AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, connection *connections, int maxconnnumber, GameRoom *firstRoom);
+	static void Handshake(connection client, GameRoom *firstRoom);
 	static GameRoom* NewRoom(GameRoom newroom, GameRoom* firstRoom);
 	static bool AnyActiveRooms(GameRoom *firstRoom);
 	static void AsyncRoomThr(GameRoom *room);
@@ -38,4 +45,5 @@ public:
 	static unsigned int randNum();
 	static void IntToBytes(char *firstByte, int *integer);
 	static void BytesToInt(char *firstByte, int *integer);
+	static void ZeroBuff(char *firstByte, int sizeOfBuff);
 };
