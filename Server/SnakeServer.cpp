@@ -36,11 +36,12 @@
 
 int main()
 {
-	//NetworkEngine networkengine;
-	//if (!networkengine.Init()) return -1;
+	NetworkEngine networkengine;
+	if (!networkengine.Init()) return -1;
+	//std::cout << sizeof(GameRoom);
+	std::cin.get();
 	//std::cin.get();
-	//std::cin.get();
-	std::cout << sizeof(GameRoom);
+	//std::cout << sizeof(GameRoom);
 	std::cin.get();
 	return 0;
 }
