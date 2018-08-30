@@ -3,11 +3,11 @@
 
 struct connection
 {
-	int GameDir = 0;
-	bool RecvedPhysics = false;
-	wchar_t* nickname;
+	SOCKET connectSock;
 	unsigned long long uuid;
+	wchar_t* nickname;
+	char GameDir = 0;
+	bool RecvedPhysics = false;
 	bool connected = false;
 	bool votedForStart = false;
-	SOCKET connectSock;
 };

@@ -6,10 +6,7 @@
 #include <iostream>
 #include <thread>
 #include <vector>
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
 #pragma comment(lib, "Ws2_32.lib")
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
 
 #include "GameRoom.h"
 #include "connection.h"
@@ -47,11 +44,11 @@ private:
 	WSAData wData;
 	SOCKADDR_IN address;
 	SOCKET listenSock;
-	connection connections[1000];
+	//connection connections[1000];
 	GameRoom rooms[1000];
 public:
 	bool Init();
-	static void AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, connection *connections, int maxconnnumber, GameRoom *firstRoom);
+	static void AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, int maxconnnumber, GameRoom *firstRoom);
 	static void Handshake(connection client, GameRoom *firstRoom);
 	static GameRoom* NewRoom(GameRoom newroom, GameRoom* firstRoom);
 	static bool AnyActiveRooms(GameRoom *firstRoom);

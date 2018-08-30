@@ -18,14 +18,13 @@ bool NetworkEngine::Init()
 	listenSock = socket(AF_INET, SOCK_STREAM, NULL);
 	bind(listenSock, (SOCKADDR*)&address, sizeof(address));
 	listen(listenSock, SOMAXCONN);
-	std::thread acceptingthr(AcceptingThread, listenSock, address, &connections[0], 1000, &rooms[0]);
+	std::thread acceptingthr(AcceptingThread, listenSock, address, 1000, &rooms[0]);
 	acceptingthr.detach();
 	return true;
 }
 
-void NetworkEngine::AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, connection *connections, int maxconnnumber, GameRoom *firstRoom)
+void NetworkEngine::AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, int maxconnnumber, GameRoom *firstRoom)
 {
-	connection *firstconnection = connections;
 	int addrlen = sizeof(address);
 	SOCKET connectSock;
 	connection newPlayer;
@@ -147,9 +146,11 @@ void NetworkEngine::Handshake(connection client, GameRoom *firstRoom)
 		buff[5] = '\0';
 		send(client.connectSock, buff, 6, NULL);
 		std::thread NewRoom(AsyncRoomThr, room);
-		std::thread newPlayer(AsyncUserConnectionThr, room, &room->players[0]);
-		newPlayer.detach();
 		NewRoom.detach();
+		/* Instead of creating new thread i call this function in this thread */
+		/*std::thread newPlayer(AsyncUserConnectionThr, room, &room->players[0]);
+		newPlayer.detach();*/
+		AsyncUserConnectionThr(room, &room->players[0]);
 		return;
 	}
 	if (buff[1] == '\x02')
@@ -170,8 +171,11 @@ void NetworkEngine::Handshake(connection client, GameRoom *firstRoom)
 				int newclientid = room->ConnectPlayer(client);
 				send(client.connectSock, buff, 6, NULL);
 				std::cout << L"Recently connected client data: nickname - " << client.nickname << L" uuid - " << client.uuid << " room id - " << room->URID << std::endl;
-				std::thread newPlayer(AsyncUserConnectionThr, room, &room->players[newclientid]);
-				newPlayer.detach();
+
+				/* Instead of creating new thread i call this function in this thread */
+				/*std::thread newPlayer(AsyncUserConnectionThr, room, &room->players[newclientid]);
+				newPlayer.detach();*/
+				AsyncUserConnectionThr(room, &room->players[newclientid]);
 				return;
 			}
 		}
@@ -302,8 +306,7 @@ void NetworkEngine::AsyncUserConnectionThr(GameRoom *room, connection *player)
 void NetworkEngine::SendPhysicsToClient(GameRoom *room, connection *client, std::vector<PhysicalObject>& physics)
 {
 	int physicssize = physics.size();
-	//char* physicsbuff = new char[physicssize * sizeof(PhysicalObject) + 1];
-	char physicsbuff[46080];
+	char physicsbuff[11520];
 	physicsbuff[0] = '\0f';
 	for (int i = 1; i <= physicssize; i++)
 	{
@@ -326,7 +329,6 @@ void NetworkEngine::SendPhysicsToClient(GameRoom *room, connection *client, std:
 		closesocket(client->connectSock);
 		if (!room->AnyConnectedPlayers()) room->roomActive = false;
 	}
-	//delete[] physicsbuff;
 }
 
 const char* NetworkEngine::WSAErrorToString()
