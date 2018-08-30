@@ -1,8 +1,8 @@
 #pragma once
 
 struct XY {
-	int x;
-	int y;
+	short x;
+	short y;
 };
 
 struct AABB
@@ -14,7 +14,7 @@ struct AABB
 struct PhysicalObject
 {
 	AABB borders;
-	int type;
+	char type;
 };
 
 // Types of objects

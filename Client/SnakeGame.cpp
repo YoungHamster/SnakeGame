@@ -7,12 +7,17 @@
 #include "Apple.h"
 #include "ReadInput.h"
 #include "Menu.h"
+#include "ClientNetworkEngine.h"
 #ifndef RENDERER
 #include "Renderer.h"
 #endif
 
 bool inmenu = true;
 bool gamerunning = true;
+static bool keyboardinputmodeText = true;
+std::wstring inputString;
+
+bool singleplayer = true;
 
 static int tempDir1 = LEFT;
 static int tempDir2 = LEFT;
@@ -67,6 +72,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 	GameLogic game;
 	Renderer rend;
 	Menu menu;
+	ClientNetworkEngine net;
 	int t = clock();
 	if (!game.Init(GameFieldWidth, GameFieldHeight, Snake1Length, Snake2Length, Snake3Length, Snake4Length))
 	{
@@ -116,6 +122,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 			if (inmenu)
 			{
 				/* Menu loop */
+				keyboardinputmodeText = true;
+
 				game.OneTick(0, 0, 0, 0);
 				rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), true);
 				if (GetAsyncKeyState(VK_LBUTTON) < 0)
@@ -129,7 +137,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 					}
 					if (button == L"MULTIPLAYER")
 					{
-						menu.ChangePage(MULTIPLAYER);
+						//menu.ChangePage(MULTIPLAYER);
+						menu.ChangePage(3);
+						net.Connect("127.0.0.1", 25565);
+						net.VoteForStart();
+						singleplayer = false;
+						keyboardinputmodeText = false;
+						inmenu = false;
 					}
 					if (button == L"OPTIONS")
 					{
@@ -152,33 +166,50 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 			}
 			else
 			{
-				if (button == L"BACK TO MAIN MENU" && GetAsyncKeyState(VK_LBUTTON) < 0)
+				keyboardinputmodeText = false;
+				if (singleplayer)
 				{
-					snake1dir = LEFT;
-					snake2dir = LEFT;
-					tempDir1 = LEFT;
-					tempDir2 = LEFT;
-					menu.ChangePage(0);
-					inmenu = true;
+					if (button == L"BACK TO MAIN MENU" && GetAsyncKeyState(VK_LBUTTON) < 0)
+					{
+						snake1dir = LEFT;
+						snake2dir = LEFT;
+						tempDir1 = LEFT;
+						tempDir2 = LEFT;
+						menu.ChangePage(0);
+						inmenu = true;
+					}
+					/* Game loop */
+					Sleep(100 / GameSpeed / 2);
+					delta = clock() - lastmovetime;
+					if (delta >= 100 / GameSpeed)
+					{
+						//if (tempDir1 > 0 && tempDir1 < 5 && tempDir2 > 0 && tempDir2 < 5)
+						if (tempDir1 > 0 && tempDir1 < 5)
+						{
+							snake1dir = tempDir1;
+						}
+						if (tempDir2 > 0 && tempDir2 < 5)
+						{
+							snake2dir = tempDir2;
+						}
+						game.OneTick(snake2dir, snake1dir, 1, 1);
+						SortSnakesByLenght(&menu, &game);
+						rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), false);
+						lastmovetime = clock();
+					}
 				}
-				/* Game loop */
-				Sleep(100 / GameSpeed / 2);
-				delta = clock() - lastmovetime;
-				if (delta >= 100 / GameSpeed)
+				else
 				{
-					//if (tempDir1 > 0 && tempDir1 < 5 && tempDir2 > 0 && tempDir2 < 5)
-					if(tempDir1 > 0 && tempDir1 < 5)
+					if (button == L"BACK TO MAIN MENU" && GetAsyncKeyState(VK_LBUTTON) < 0)
+					{
+						menu.ChangePage(0);
+						net.Disconnect();
+					}
+					if (tempDir1 > 0 && tempDir1 < 5)
 					{
 						snake1dir = tempDir1;
 					}
-					if (tempDir2 > 0 && tempDir2 < 5)
-					{
-						snake2dir = tempDir2;
-					}
-					game.OneTick(snake2dir, snake1dir, 0, 0);
-					SortSnakesByLenght(&menu, &game);
-					rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), false);
-					lastmovetime = clock();
+					rend.RenderFrame(*net.SendDirGetPhysics((char)tempDir1), menu.GetButtonsVectorForRenderer(), false);
 				}
 			}
 		}
@@ -254,32 +285,46 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 		/*char C[255];
 		wsprintf(C, "нажата клавиша с кодом %x \n", pkbs->vkCode);
 		OutputDebugString(C);*/
-		switch (pkbs->vkCode)
+		if(keyboardinputmodeText)
 		{
-		case 0x57:
-			tempDir1 = UP;
-			break;
-		case 0x53:
-			tempDir1 = DOWN;
-			break;
-		case 0x41:
-			tempDir1 = LEFT;
-			break;
-		case 0x44:
-			tempDir1 = RIGHT;
-			break;
-		case VK_UP:
-			tempDir2 = UP;
-			break;
-		case VK_DOWN:
-			tempDir2 = DOWN;
-			break;
-		case VK_LEFT:
-			tempDir2 = LEFT;
-			break;
-		case VK_RIGHT:
-			tempDir2 = RIGHT;
-			break;
+			if (pkbs->vkCode >= 0x41 && pkbs->vkCode <= 0x5a)
+			{
+				inputString.push_back((wchar_t)pkbs->vkCode);
+			}
+			if (pkbs->vkCode >= 0x30 && pkbs->vkCode <= 0x39)
+			{
+				inputString.push_back((wchar_t)pkbs->vkCode);
+			}
+		}
+		else
+		{
+			switch (pkbs->vkCode)
+			{
+			case 0x57:
+				tempDir1 = UP;
+				break;
+			case 0x53:
+				tempDir1 = DOWN;
+				break;
+			case 0x41:
+				tempDir1 = LEFT;
+				break;
+			case 0x44:
+				tempDir1 = RIGHT;
+				break;
+			case VK_UP:
+				tempDir2 = UP;
+				break;
+			case VK_DOWN:
+				tempDir2 = DOWN;
+				break;
+			case VK_LEFT:
+				tempDir2 = LEFT;
+				break;
+			case VK_RIGHT:
+				tempDir2 = RIGHT;
+				break;
+			}
 		}
 	}
 	return CallNextHookEx(hhook, nCode, wParam, lParam);

@@ -9,7 +9,7 @@ void GameLogic::Reset()
 	physics.clear();
 }
 
-bool GameLogic::Init(unsigned int gameFieldWidth, unsigned int gameFieldHeight, int snake1Length, int snake2Length, int snake3Length, int snake4Length)
+bool GameLogic::Init(short gameFieldWidth, short gameFieldHeight, short snake1Length, short snake2Length, short snake3Length, short snake4Length)
 {
 	Reset();
 
@@ -229,7 +229,7 @@ bool GameLogic::Init(unsigned int gameFieldWidth, unsigned int gameFieldHeight, 
 	return true;
 }
 
-int GameLogic::OneTick(int snake1dir, int snake2dir, int snake3dir, int snake4dir)
+int GameLogic::OneTick(char snake1dir, char snake2dir, char snake3dir, char snake4dir)
 {
 	for (int i = 0; i < 4; i++)
 	{
@@ -284,7 +284,7 @@ int GameLogic::OneTick(int snake1dir, int snake2dir, int snake3dir, int snake4di
 	if (!snake1alive && !snake2alive && !snake3alive && !snake4alive)
 	{
 		Reset();
-		Init(64, 36, 5, 5, 5, 5);
+		Init(64, 36, 5, 5, 0, 0);
 		return 1;
 	}
 	//if (snake2alive)
@@ -427,7 +427,7 @@ bool GameLogic::MoveSnakeBlock(SnakeBlock* block)
 	return true;
 }
 
-bool GameLogic::MoveSnake(int Direction, int SnakeID)
+bool GameLogic::MoveSnake(char Direction, int SnakeID)
 {
 	if (SnakeID > 3 || SnakeID < 0) return false;
 

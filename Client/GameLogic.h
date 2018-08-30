@@ -12,7 +12,7 @@
 struct SnakeBlock
 {
 	int PhysicalBodyID;
-	int Direction;
+	char Direction;
 };
 
 class GameLogic
@@ -32,11 +32,11 @@ public:
 	std::vector<PhysicalObject> physics;
 	std::vector<SnakeBlock> snakes[4];
 	void Reset();
-	bool Init(unsigned int gameFieldWidth, unsigned int gameFieldHeight, int snake1Length, int snake2Length, int snake3Length, int snake4Length);
-	int OneTick(int snake1dir, int snake2dir, int snake3dir, int snake4dir);
+	bool Init(short gameFieldWidth, short gameFieldHeight, short snake1Length, short snake2Length, short snake3Length, short snake4Length);
+	int OneTick(char snake1dir, char snake2dir, char snake3dir, char snake4dir);
 	bool EnlargeSnake(int Length, int SnakeID);
 	bool MoveSnakeBlock(SnakeBlock* block);
-	bool MoveSnake(int Direction, int SnakeID);
+	bool MoveSnake(char Direction, int SnakeID);
 	void KillSnake(int SnakeID);
 
 	int HandleAIForSnake(int SnakeID);
