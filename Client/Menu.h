@@ -18,8 +18,8 @@ public:
 	//std::vector<button>& GetButtonsVectorForRenderer(int PageID);
 	void ChangePage(int PageID);
 	void AddPage();
-	void AddButton(int PageID, bool Clickable, bool Centered, int x, int y, wchar_t *Text, int Size, Renderer* renderer);
+	void AddButton(int PageID, bool Clickable, bool Centered, int x, int y, wchar_t *Text, int Size, Renderer* renderer, int UBID);
 	void ChangeButtonText(int PageID, int ButtonID, wchar_t* Text);
-	wchar_t* CheckMouseCollision(POINT mouse, bool *inmenu, bool *gamerunning);
+	int CheckMouseCollision(POINT mouse, bool *inmenu, bool *gamerunning);
 	/*void AddButton(int PageID, button button);*/
 };

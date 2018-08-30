@@ -284,7 +284,7 @@ int GameLogic::OneTick(char snake1dir, char snake2dir, char snake3dir, char snak
 	if (!snake1alive && !snake2alive && !snake3alive && !snake4alive)
 	{
 		Reset();
-		Init(64, 36, 5, 5, 0, 0);
+		Init(64, 36, 5, 5, 5, 5);
 		return 1;
 	}
 	//if (snake2alive)

@@ -27,9 +27,10 @@ bool Page::AddButton(button button)
 //	return true;
 //}
 
-bool Page::AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text, int Size, Renderer* renderer)
+bool Page::AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text, int Size, Renderer* renderer, int UBID)
 {
 	button button;
+	button.UBID = UBID;
 	button.Clickable = Clickable;
 	button.Centered = Centered;
 	button.Text = Text;
@@ -55,7 +56,7 @@ bool Page::AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text,
 	return true;
 }
 
-wchar_t* Page::CheckMouseCollisions(POINT mouse)
+int Page::CheckMouseCollisions(POINT mouse)
 {
 	int CollidedButton = -1;
 	AABB mousebox;
@@ -77,7 +78,7 @@ wchar_t* Page::CheckMouseCollisions(POINT mouse)
 	}
 	if (CollidedButton != -1)
 	{
-		return buttons[CollidedButton].Text;
+		return buttons[CollidedButton].UBID;
 	}
-	return NULL;
+	return -1;
 }

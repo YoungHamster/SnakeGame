@@ -10,6 +10,7 @@ struct button
 	AABB EnlargedClickBox;
 	int Size;
 	wchar_t *Text;
+	int UBID;
 	//void(*whattodo)(Menu *menu);
 	//void(*whattodo)() = NULL;
 };
