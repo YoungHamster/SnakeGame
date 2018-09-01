@@ -12,7 +12,8 @@ void GameLogic::Reset()
 bool GameLogic::Init(short gameFieldWidth, short gameFieldHeight, short snake1Length, short snake2Length, short snake3Length, short snake4Length)
 {
 	Reset();
-
+	GameFieldHeight = gameFieldHeight;
+	GameFieldWidth = gameFieldWidth;
 	physics.resize(5 + snake1Length + snake2Length + snake3Length + snake4Length);
 	PhysicalObject tempObj;
 	SnakeBlock tempBlock;
@@ -284,7 +285,7 @@ int GameLogic::OneTick(char snake1dir, char snake2dir, char snake3dir, char snak
 	if (!snake1alive && !snake2alive && !snake3alive && !snake4alive)
 	{
 		Reset();
-		Init(64, 36, 5, 5, 5, 5);
+		Init(GameFieldWidth, GameFieldHeight, 5, 5, 5, 5);
 		return 1;
 	}
 	//if (snake2alive)

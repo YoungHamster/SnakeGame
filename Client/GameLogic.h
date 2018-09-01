@@ -28,6 +28,9 @@ private:
 	Apple apple;
 	AABB appleSpawnZone;
 
+	short GameFieldWidth = 64;
+	short GameFieldHeight = 36;
+
 public:
 	std::vector<PhysicalObject> physics;
 	std::vector<SnakeBlock> snakes[4];

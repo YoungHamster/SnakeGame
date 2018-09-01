@@ -14,6 +14,10 @@
 #include "SDL_Rect.h"
 
 #define BITMAPSNUMBER 39 + 41
+#define SCREENHEIGTH 720
+#define SCREENWIDTH 1280
+#define GAMEFIELDHEIGTH (SCREENHEIGTH / 30)
+#define GAMEFIELDWIDTH (SCREENWIDTH / 30)
 
 static int bitmapsHWs[BITMAPSNUMBER];
 
@@ -28,13 +32,14 @@ private:
 	// 39 GameTextures + 41 ASCII Symbols
 	ID2D1Bitmap* bitmaps[BITMAPSNUMBER];
 
-	int GameFieldWidth = 64;
-	int GameFieldHeigth = 36;
+	int GameFieldWidth = GAMEFIELDWIDTH;
+	int GameFieldHeigth = GAMEFIELDHEIGTH;
 public:
 	void SetGFW_GFH(int GFW, int GFH) { GameFieldWidth = GFW; GameFieldHeigth = GFH; }
 
 	bool Init(HWND windowhandle);
 	void RenderFrame(std::vector<PhysicalObject>& physics, std::vector<button>& buttons, bool menumode);
+	void RenderFrame(char compressedPhysics[GAMEFIELDHEIGTH * GAMEFIELDWIDTH], std::vector<button>& buttons);
 	//void RenderFrame(std::vector<PhysicalObject>& physics, std::vector<button>& buttons);
 
 	void BeginDraw() { rendertarget->BeginDraw(); }
@@ -50,6 +55,8 @@ public:
 	void AutoDrawStats();
 	/* Use only inside RenderFrame function */
 	void RenderButton(button button);
+
+	D2D1_SIZE_U GetRenderTargetSize();
 
 };
 

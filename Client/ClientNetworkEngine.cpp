@@ -1,6 +1,6 @@
 #include "ClientNetworkEngine.h"
 
-bool ClientNetworkEngine::Connect(const char* ip, unsigned short port)
+bool ClientNetworkEngine::Connect(const char* ip, unsigned short port, Menu *menu, Renderer *renderer, HWND windowhandle)
 {
 	int succ;
 	WSAData wData;
@@ -34,7 +34,14 @@ bool ClientNetworkEngine::Connect(const char* ip, unsigned short port)
 	{
 		delete[] rooms;
 	}
-	rooms = new int[roomsIdsNumber];
+	if (roomsIdsNumber > 0)
+	{
+		rooms = new int[roomsIdsNumber];
+	}
+	else
+	{
+		return false;
+	}
 	for (int i = 0; i < roomsIdsNumber; i++)
 	{
 		for (int j = 0; j < sizeof(int); j++)
@@ -42,9 +49,39 @@ bool ClientNetworkEngine::Connect(const char* ip, unsigned short port)
 			roomIdconv.bytes[j] = buff[i * sizeof(int) + j + 9];
 		}
 		rooms[i] = roomIdconv.integer;
+		std::wstring newButtonText(L"Room ");
+		newButtonText += std::to_wstring(i);
+		newButtonText += L" UUID";
+		newButtonText += std::to_wstring(rooms[i]);
+		menu->AddButton(1, true, true, 0, 260 + i * 56, const_cast<wchar_t*>(newButtonText.c_str()), 6, renderer, rooms[i]);
 	}
-
+	menu->AddButton(1, true, true, 0, 204, const_cast<wchar_t*>(L"NEW ROOM"), 6, renderer, 2147483647);
+	bool playerChoosing = true;
 	int playerchoose = 2147483647;
+	while (playerChoosing)
+	{
+		POINT p;
+		GetCursorPos(&p);
+		ScreenToClient(windowhandle, &p);
+		int button = menu->CheckMouseCollision(p);
+		if (button == playerchoose)
+		{
+			playerChoosing = false;
+		}
+		if (button == 7)
+		{
+			menu->ChangePage(0);
+			return false;
+		}
+		if (button > -2000000000 && button < 2000000000)
+		{
+			playerchoose = button;
+			playerChoosing = false;
+		}
+		std::vector<PhysicalObject> emptyPhysics;
+		renderer->RenderFrame(emptyPhysics, menu->GetButtonsVectorForRenderer(), false);
+		Sleep(10);
+	}
 	/* Somehow give player rooms ids and get input from him */
 	buff[0] = 0x02;
 	if (playerchoose != 2147483647)
@@ -57,7 +94,6 @@ bool ClientNetworkEngine::Connect(const char* ip, unsigned short port)
 		}
 		send(sock, buff, 6, NULL);
 	}
-	//gethostbyname();
 	else
 	{
 		buff[1] = 0x01;
@@ -92,9 +128,16 @@ bool ClientNetworkEngine::VoteForStart()
 std::vector<PhysicalObject>* ClientNetworkEngine::SendDirGetPhysics(char dir)
 {
 	std::vector<PhysicalObject> *physics = new std::vector<PhysicalObject>;
-	char buff[11520];
+	char buff[2304 * sizeof(PhysicalObject)];
 	buff[0] = 0x07;
-	buff[1] = dir;
+	if (dir >= 0 && dir <= 4)
+	{
+		buff[1] = dir;
+	}
+	else
+	{
+		buff[1] = '\0';
+	}
 	send(sock, buff, 2, NULL);
 	int physicsSize = (recv(sock, buff, sizeof(buff), NULL) - 1) / 4;
 	if (buff[0] == 0x08)

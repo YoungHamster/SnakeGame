@@ -124,7 +124,7 @@ void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, std::vector<but
 		backgroundR = 0.5f;
 		backgroundG = 0.4f;
 		backgroundB = 0.4f;
-		opacity = 0.5f;
+		opacity = 0.3f;
 	}
 	else
 	{
@@ -154,6 +154,41 @@ void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, std::vector<but
 		}
 	}
 
+	for (int i = 0; i < buttons.size(); i++)
+	{
+		RenderButton(buttons[i]);
+	}
+	EndDraw();
+}
+
+void Renderer::RenderFrame(char compressedPhysics[GAMEFIELDHEIGTH * GAMEFIELDWIDTH], std::vector<button>& buttons)
+{
+	float backgroundR = 0.4f;
+	float backgroundG = 0.5f;
+	float backgroundB = 0.4f;
+	float opacity = 0.7f;
+	int renderWidth = this->rendertarget->GetPixelSize().width;
+	int renderHeigth = this->rendertarget->GetPixelSize().height;
+	int xFactor = renderWidth / GameFieldWidth;
+	int yFactor = renderHeigth / GameFieldHeigth;
+	BeginDraw();
+	ClearScreen(backgroundR, backgroundG, backgroundB);
+
+	SDL_Rect rect;
+	rect.w = xFactor;
+	rect.h = yFactor;
+	for (int i = 0; i < GAMEFIELDHEIGTH + 3; i++)
+	{
+		for (int j = 0; j < GAMEFIELDWIDTH; j++)
+		{
+			rect.x = j * xFactor;
+			rect.y = renderHeigth - (i - 1) * yFactor;
+			if (compressedPhysics[i * GAMEFIELDWIDTH + j] != 0)
+			{
+				DrawBitmap(bitmaps[compressedPhysics[i * GAMEFIELDWIDTH + j] - 1], &rect, NULL, opacity);
+			}
+		}
+	}
 	for (int i = 0; i < buttons.size(); i++)
 	{
 		RenderButton(buttons[i]);
@@ -306,7 +341,7 @@ void Renderer::RenderButton(button button)
 	{
 		if (button.Centered)
 		{
-			DrawTextOnRend(button.Text, button.Size, (1280 / 2) - CountTextWidth(button.Text, button.Size) / 2, button.ClickBox.min.y);
+			DrawTextOnRend(button.Text, button.Size, (rendertarget->GetPixelSize().width / 2) - CountTextWidth(button.Text, button.Size) / 2, button.ClickBox.min.y);
 		}
 		else
 		{
@@ -317,7 +352,7 @@ void Renderer::RenderButton(button button)
 	{
 		if (button.Centered)
 		{
-			DrawTextOnRend(button.Text, button.Size + 1, (1280 / 2) - CountTextWidth(button.Text, button.Size + 1) / 2, button.ClickBox.min.y);
+			DrawTextOnRend(button.Text, button.Size + 1, (rendertarget->GetPixelSize().width / 2) - CountTextWidth(button.Text, button.Size + 1) / 2, button.ClickBox.min.y);
 		}
 		else
 		{
@@ -344,4 +379,9 @@ int Renderer::CountTextWidth(const wchar_t* text, int Size)
 		Width = Width + currentW + Size;
 	}
 	return Width;
+}
+
+D2D1_SIZE_U Renderer::GetRenderTargetSize()
+{
+	return rendertarget->GetPixelSize();
 }

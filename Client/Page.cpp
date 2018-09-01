@@ -41,7 +41,7 @@ bool Page::AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text,
 	}
 	else
 	{
-		box.min.x = 1280 / 2 - renderer->CountTextWidth(Text, Size) / 2;
+		box.min.x = renderer->GetRenderTargetSize().width / 2 - renderer->CountTextWidth(Text, Size) / 2;
 	}
 	box.min.y = y;
 	box.max.x = box.min.x + renderer->CountTextWidth(Text, Size);

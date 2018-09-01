@@ -37,15 +37,15 @@ static int tempDir1 = LEFT;
 static int tempDir2 = LEFT;
 HHOOK hhook = NULL;
 
-int Snake1Length = 5;
+int Snake1Length = GAMEFIELDWIDTH - 14;
 int Snake2Length = 5;
 int Snake3Length = 5;
 int Snake4Length = 5;
 double GameSpeed = 1;
-unsigned int GameFieldWidth = 64;
-unsigned int GameFieldHeight = 36;
+short GameFieldWidth = GAMEFIELDWIDTH;
+short GameFieldHeight = GAMEFIELDHEIGTH;
 
-bool MenuTick(POINT p);
+bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime);
 void SingleplayerTick(POINT p, int* lastMoveTime);
 void MultiplayerTick(POINT p);
 LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
@@ -73,7 +73,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 	windowclass.style = CS_HREDRAW | CS_VREDRAW;
 	RegisterClassEx(&windowclass);
 
-	RECT rect = { 0, 0, 1280, 720 };
+	RECT rect = { 0, 0, SCREENWIDTH, SCREENHEIGTH };
 	AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, false, WS_EX_OVERLAPPEDWINDOW);
 
 	HWND windowhandle = CreateWindowW(L"MainWindow", L"SnakeGame-DirectX", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, hInstance, 0);
@@ -123,103 +123,21 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 		{
 			GetCursorPos(&p);
 			ScreenToClient(windowhandle, &p);
-			//int button = menu.CheckMouseCollision(p, &inmenu, &gamerunning);
 			if (inmenu)
 			{
-				///* Menu loop */
-				//keyboardinputmodeText = true;
-
-				//game.OneTick(0, 0, 0, 0);
-				//rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), true);
-				//if (GetAsyncKeyState(VK_LBUTTON) < 0)
-				//{
-				//	if (button == L"START")
-				//	{
-				//		menu.ChangePage(3);
-				//		game.Reset();
-				//		game.Init(GameFieldWidth, GameFieldHeight, Snake1Length, Snake2Length, Snake3Length, Snake4Length);
-				//		inmenu = false;
-				//	}
-				//	if (button == L"MULTIPLAYER")
-				//	{
-				//		//menu.ChangePage(MULTIPLAYER);
-				//		menu.ChangePage(3);
-				//		net.Connect("127.0.0.1", 25565);
-				//		net.VoteForStart();
-				//		singleplayer = false;
-				//		keyboardinputmodeText = false;
-				//		inmenu = false;
-				//	}
-				//	if (button == L"OPTIONS")
-				//	{
-				//		menu.ChangePage(OPTIONS);
-				//	}
-				//	if (button == L"EXIT")
-				//	{
-				//		gamerunning = false;
-				//	}
-				//	if (button == L"BACK")
-				//	{
-				//		menu.ChangePage(0);
-				//		rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), true);
-				//		Sleep(200);
-				//	}
-				//}
-				//Sleep(50);
-				MenuTick(p);
+				
+				MenuTick(p, windowhandle, &lastmovetime);
 			}
 			else
 			{
 				if (singleplayer)
 				{
-					////if (button == L"BACK TO MAIN MENU" && GetAsyncKeyState(VK_LBUTTON) < 0)
-					//if (button == 7 && GetAsyncKeyState(VK_LBUTTON) < 0)
-					//{
-					//	snake1dir = LEFT;
-					//	snake2dir = LEFT;
-					//	tempDir1 = LEFT;
-					//	tempDir2 = LEFT;
-					//	menu.ChangePage(0);
-					//	inmenu = true;
-					//}
-					///* Game loop */
-					//Sleep(100 / GameSpeed / 2);
-					//delta = clock() - lastmovetime;
-					//if (delta >= 100 / GameSpeed)
-					//{
-					//	//if (tempDir1 > 0 && tempDir1 < 5 && tempDir2 > 0 && tempDir2 < 5)
-					//	if (tempDir1 > 0 && tempDir1 < 5)
-					//	{
-					//		snake1dir = tempDir1;
-					//	}
-					//	if (tempDir2 > 0 && tempDir2 < 5)
-					//	{
-					//		snake2dir = tempDir2;
-					//	}
-					//	game.OneTick(0, 0, 0, 0);
-					//	SortSnakesByLenght(&menu, &game);
-					//	rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), false);
-					//	lastmovetime = clock();
-					//}
+					
 					SingleplayerTick(p, &lastmovetime);
 				}
 				else
 				{
-					////if (button == L"BACK TO MAIN MENU" && GetAsyncKeyState(VK_LBUTTON) < 0)
-					//if (button == 7 && GetAsyncKeyState(VK_LBUTTON) < 0)
-					//{
-					//	menu.ChangePage(0);
-					//	net.Disconnect();
-					//}
-					//if (tempDir1 > 0 && tempDir1 < 5)
-					//{
-					//	snake1dir = tempDir1;
-					//}
-					//std::vector<PhysicalObject> *physics = net.SendDirGetPhysics((char)tempDir1);
-					//if (physics != NULL)
-					//{
-					//	rend.RenderFrame(*physics, menu.GetButtonsVectorForRenderer(), false);
-					//}
+					
 					MultiplayerTick(p);
 				}
 			}
@@ -228,13 +146,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 	return 0;
 }
 
-bool MenuTick(POINT p)
+bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime)
 {
 	/* Menu loop */
-	int button = menu.CheckMouseCollision(p, &inmenu, &gamerunning);
+	int button = menu.CheckMouseCollision(p);
 	keyboardinputmodeText = true;
 
-	game.OneTick(0, 0, 0, 0);
+	if ((clock() - *lastMoveTime) >= 75 / GameSpeed)
+	{
+		game.OneTick(0, 0, 0, 0);
+		*lastMoveTime = clock();
+	}
 	rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), true);
 	if (GetAsyncKeyState(VK_LBUTTON) < 0)
 	{
@@ -284,71 +206,13 @@ bool MenuTick(POINT p)
 			menu.ChangeButtonText(2, 2, const_cast<wchar_t*>(newButtonText.c_str()));
 			break;
 		case 18:
-			net.Connect("127.0.0.1", 25565);
+			net.Connect("127.0.0.1", 25565, &menu, &rend, windowhandle);
 			net.VoteForStart();
 			singleplayer = false;
 			keyboardinputmodeText = false;
 			inmenu = false;
 			break;
 		}
-		////if (button == L"START")
-		//if(button == 0)
-		//{
-		//	menu.ChangePage(3);
-		//	game.Reset();
-		//	game.Init(GameFieldWidth, GameFieldHeight, Snake1Length, Snake2Length, Snake3Length, Snake4Length);
-		//	inmenu = false;
-		//}
-		////if (button == L"MULTIPLAYER")
-		//if (button == 1)
-		//{
-		//	//menu.ChangePage(MULTIPLAYER);
-		//	menu.ChangePage(3);
-		//	net.Connect("127.0.0.1", 25565);
-		//	net.VoteForStart();
-		//	singleplayer = false;
-		//	keyboardinputmodeText = false;
-		//	inmenu = false;
-		//}
-		////if (button == L"OPTIONS")
-		//if (button == 2)
-		//{
-		//	menu.ChangePage(OPTIONS);
-		//}
-		////if (button == L"EXIT")
-		//if (button == 3)
-		//{
-		//	gamerunning = false;
-		//}
-		////if (button == L"BACK")
-		//if (button == 7)
-		//{
-		//	menu.ChangePage(0);
-		//	rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), true);
-		//	Sleep(200);
-		//}
-		//if (button == 9)
-		//{
-		//	GameSpeed = GameSpeed + 0.01;
-		//	std::wstring newButtonText(L"SPEED - ");
-		//	newButtonText += std::to_wstring(GameSpeed);
-		//	newButtonText.pop_back();
-		//	newButtonText.pop_back();
-		//	newButtonText.pop_back();
-		//	newButtonText.pop_back();
-		//	menu.ChangeButtonText(2, 2, const_cast<wchar_t*>(newButtonText.c_str()));
-		//}
-		//if (button == 11)
-		//{
-		//	GameSpeed = GameSpeed - 0.01;
-		//	std::wstring newButtonText(L"SPEED - ");
-		//	newButtonText += std::to_wstring(GameSpeed);
-		//	newButtonText.pop_back();
-		//	newButtonText.pop_back();
-		//	newButtonText.pop_back();
-		//	newButtonText.pop_back();
-		//	menu.ChangeButtonText(2, 2, const_cast<wchar_t*>(newButtonText.c_str()));
-		//}
 	}
 	Sleep(10);
 	return true;
@@ -356,8 +220,7 @@ bool MenuTick(POINT p)
 
 void SingleplayerTick(POINT p, int* lastMoveTime)
 {
-	int button = menu.CheckMouseCollision(p, &inmenu, &gamerunning);
-	//if (button == L"BACK TO MAIN MENU" && GetAsyncKeyState(VK_LBUTTON) < 0)
+	int button = menu.CheckMouseCollision(p);
 	if (button == 7 && GetAsyncKeyState(VK_LBUTTON) < 0)
 	{
 		snake1dir = LEFT;
@@ -369,11 +232,12 @@ void SingleplayerTick(POINT p, int* lastMoveTime)
 		keyboardinputmodeText = true;
 	}
 	/* Game loop */
-	Sleep(100 / GameSpeed / 2);
-	//delta = clock() - lastmovetime;
-	if ((clock() - *lastMoveTime) >= 100 / GameSpeed)
+	if (GameSpeed > 0)
 	{
-		//if (tempDir1 > 0 && tempDir1 < 5 && tempDir2 > 0 && tempDir2 < 5)
+		Sleep(100 / GameSpeed / 2);
+	}
+	if ((clock() - *lastMoveTime) >= 75 / GameSpeed)
+	{
 		if (tempDir1 > 0 && tempDir1 < 5)
 		{
 			snake1dir = tempDir1;
@@ -382,8 +246,30 @@ void SingleplayerTick(POINT p, int* lastMoveTime)
 		{
 			snake2dir = tempDir2;
 		}
-		game.OneTick(0, 0, 0, 0);
+		game.OneTick(snake1dir, 0, 0, 0);
 		SortSnakesByLenght(&menu, &game);
+		//char lowCompressedPhsycics[(GAMEFIELDHEIGTH + 3) * GAMEFIELDWIDTH];
+		//AABB tempbox;
+		//for (int i = 0; i < GAMEFIELDHEIGTH + 3; i++)
+		//{
+		//	for (int j = 0; j < GAMEFIELDWIDTH; j++)
+		//	{
+		//		tempbox.min.x = j;
+		//		tempbox.min.y = i - 2 ;
+		//		tempbox.max.x = j + 1;
+		//		tempbox.max.y = i + 1 - 2;
+		//		lowCompressedPhsycics[i * GAMEFIELDWIDTH + j] = 0;
+		//		for (int n = 0; n < game.physics.size(); n++)
+		//		{
+		//			if (AABBvsAABB(game.physics[n].borders, tempbox) && game.physics[n].type != DEAD_SNAKE)
+		//			{
+		//				lowCompressedPhsycics[i * GAMEFIELDWIDTH + j] = game.physics[n].type;
+		//				//n = game.physics.size();
+		//			}
+		//		}
+		//	}
+		//}
+		//rend.RenderFrame(lowCompressedPhsycics, menu.GetButtonsVectorForRenderer());
 		rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), false);
 		*lastMoveTime = clock();
 	}
@@ -391,8 +277,8 @@ void SingleplayerTick(POINT p, int* lastMoveTime)
 
 void MultiplayerTick(POINT p)
 {
-	int button = menu.CheckMouseCollision(p, &inmenu, &gamerunning);
-	//if (button == L"BACK TO MAIN MENU" && GetAsyncKeyState(VK_LBUTTON) < 0)
+	keyboardinputmodeText = false;
+	int button = menu.CheckMouseCollision(p);
 	if (button == 7 && GetAsyncKeyState(VK_LBUTTON) < 0)
 	{
 		menu.ChangePage(0);
@@ -477,9 +363,6 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 	KBDLLHOOKSTRUCT* pkbs = (KBDLLHOOKSTRUCT*)lParam;
 	if (WM_KEYDOWN == wParam)
 	{
-		/*char C[255];
-		wsprintf(C, "нажата клавиша с кодом %x \n", pkbs->vkCode);
-		OutputDebugString(C);*/
 		if(keyboardinputmodeText)
 		{
 			if (pkbs->vkCode >= 0x41 && pkbs->vkCode <= 0x5a)

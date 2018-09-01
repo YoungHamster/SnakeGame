@@ -9,6 +9,7 @@
 #pragma comment(lib, "Ws2_32.lib")
 
 #include "Physics.h"
+#include "Menu.h"
 
 union BytesToULL
 {
@@ -44,7 +45,7 @@ private:
 	int roomId;
 	bool matchRunning = false;;
 public:
-	bool Connect(const char* ip, unsigned short port);
+	bool Connect(const char* ip, unsigned short port, Menu *menu, Renderer *renderer, HWND windowhandle);
 	bool VoteForStart();
 	std::vector<PhysicalObject>* SendDirGetPhysics(char dir);
 	void Disconnect();

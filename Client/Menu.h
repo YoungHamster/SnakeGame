@@ -20,6 +20,6 @@ public:
 	void AddPage();
 	void AddButton(int PageID, bool Clickable, bool Centered, int x, int y, wchar_t *Text, int Size, Renderer* renderer, int UBID);
 	void ChangeButtonText(int PageID, int ButtonID, wchar_t* Text);
-	int CheckMouseCollision(POINT mouse, bool *inmenu, bool *gamerunning);
+	int CheckMouseCollision(POINT mouse);
 	/*void AddButton(int PageID, button button);*/
 };
