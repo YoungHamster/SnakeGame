@@ -306,7 +306,40 @@ void NetworkEngine::AsyncUserConnectionThr(GameRoom *room, connection *player)
 void NetworkEngine::SendPhysicsToClient(GameRoom *room, connection *client, std::vector<PhysicalObject>& physics)
 {
 	int physicssize = physics.size();
-	char physicsbuff[11520];
+	char lowCompressedPhsycics[(36 + 3) * 64 + 1];
+	AABB tempbox;
+	for (int i = 0; i < 36 + 3; i++)
+	{
+		for (int j = 0; j < 64; j++)
+		{
+			tempbox.min.x = j;
+			tempbox.min.y = i - 2 ;
+			tempbox.max.x = j + 1;
+			tempbox.max.y = i + 1 - 2;
+			lowCompressedPhsycics[i * 64 + j] = 0;
+			for (int n = 0; n < physicssize; n++)
+			{
+				if (AABBvsAABB(physics[n].borders, tempbox) && physics[n].type != DEAD_SNAKE)
+				{
+					lowCompressedPhsycics[i * 64 + j] = physics[n].type;
+					//n = game.physics.size();
+				}
+			}
+		}
+	}
+	while (client->RecvedPhysics)
+	{
+		Sleep(1);
+	}
+	if (send(client->connectSock, lowCompressedPhsycics, sizeof(lowCompressedPhsycics), NULL) <= 0)
+	{
+		std::cout << "Pizdec from user with uuid: " << client->uuid << std::endl;
+		client->connected = false;
+		closesocket(client->connectSock);
+		if (!room->AnyConnectedPlayers()) room->roomActive = false;
+	}
+	std::cout << "Sent physics to client" << std::endl;
+	/*char physicsbuff[11520];
 	physicsbuff[0] = '\0f';
 	for (int i = 1; i <= physicssize; i++)
 	{
@@ -328,7 +361,7 @@ void NetworkEngine::SendPhysicsToClient(GameRoom *room, connection *client, std:
 		client->connected = false;
 		closesocket(client->connectSock);
 		if (!room->AnyConnectedPlayers()) room->roomActive = false;
-	}
+	}*/
 }
 
 const char* NetworkEngine::WSAErrorToString()
