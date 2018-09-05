@@ -34,7 +34,7 @@ bool ClientNetworkEngine::Connect(const char* ip, unsigned short port, Menu *men
 	{
 		delete[] rooms;
 	}
-	if (roomsIdsNumber > 0)
+	if (roomsIdsNumber >= 0)
 	{
 		rooms = new int[roomsIdsNumber];
 	}
@@ -50,12 +50,15 @@ bool ClientNetworkEngine::Connect(const char* ip, unsigned short port, Menu *men
 		}
 		rooms[i] = roomIdconv.integer;
 		std::wstring newButtonText(L"Room ");
-		newButtonText += std::to_wstring(i);
+		newButtonText += std::to_wstring(rooms[i]);
 		newButtonText += L" UUID";
 		newButtonText += std::to_wstring(rooms[i]);
 		menu->AddButton(1, true, true, 0, 260 + i * 56, const_cast<wchar_t*>(newButtonText.c_str()), 6, renderer, rooms[i]);
 	}
 	menu->AddButton(1, true, true, 0, 204, const_cast<wchar_t*>(L"NEW ROOM"), 6, renderer, 2147483647);
+	std::vector<PhysicalObject> emptyPhysics;
+	renderer->RenderFrame(emptyPhysics, menu->GetButtonsVectorForRenderer(), false);
+	Sleep(1000);
 	bool playerChoosing = true;
 	int playerchoose = 2147483647;
 	while (playerChoosing)
@@ -64,25 +67,27 @@ bool ClientNetworkEngine::Connect(const char* ip, unsigned short port, Menu *men
 		GetCursorPos(&p);
 		ScreenToClient(windowhandle, &p);
 		int button = menu->CheckMouseCollision(p);
-		if (button == playerchoose)
+		if (GetAsyncKeyState(VK_LBUTTON) < 0)
 		{
-			playerChoosing = false;
-		}
-		if (button == 7)
-		{
-			menu->ChangePage(0);
-			return false;
-		}
-		if (button > -2000000000 && button < 2000000000)
-		{
-			playerchoose = button;
-			playerChoosing = false;
+			if (button == playerchoose)
+			{
+				playerChoosing = false;
+			}
+			if (button == 7)
+			{
+				menu->ChangePage(0);
+				return false;
+			}
+			if (button > -2000000000 && button < 2000000000 && button > 0 && button > 18)
+			{
+				playerchoose = button;
+				playerChoosing = false;
+			}
 		}
 		std::vector<PhysicalObject> emptyPhysics;
 		renderer->RenderFrame(emptyPhysics, menu->GetButtonsVectorForRenderer(), false);
 		Sleep(10);
 	}
-	/* Somehow give player rooms ids and get input from him */
 	buff[0] = 0x02;
 	if (playerchoose != 2147483647)
 	{
@@ -105,6 +110,7 @@ bool ClientNetworkEngine::Connect(const char* ip, unsigned short port, Menu *men
 		roomIdconv.bytes[i] = buff[i + 1];
 	}
 	roomId = roomIdconv.integer;
+	menu->ChangePage(4);
 	return true;
 }
 
@@ -159,6 +165,23 @@ std::vector<PhysicalObject>* ClientNetworkEngine::SendDirGetPhysics(char dir)
 		return physics;
 	}
 	return NULL;
+}
+
+char* ClientNetworkEngine::SendDirGetCompressedPhysics(char dir)
+{
+	char* lowCompressedPhysics = new char[39 * 64 + 1];
+	lowCompressedPhysics[0] = '\x07';
+	if (dir >= 0 && dir <= 4)
+	{
+		lowCompressedPhysics[1] = dir;
+	}
+	else
+	{
+		lowCompressedPhysics[1] = '\0';
+	}
+	send(sock, lowCompressedPhysics, 2, NULL);
+	recv(sock, lowCompressedPhysics, 39 * 64 + 1, NULL);
+	return lowCompressedPhysics;
 }
 
 void ClientNetworkEngine::Disconnect()

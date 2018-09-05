@@ -37,7 +37,7 @@ static int tempDir1 = LEFT;
 static int tempDir2 = LEFT;
 HHOOK hhook = NULL;
 
-int Snake1Length = GAMEFIELDWIDTH - 14;
+int Snake1Length = 5;
 int Snake2Length = 5;
 int Snake3Length = 5;
 int Snake4Length = 5;
@@ -161,6 +161,10 @@ bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime)
 	if (GetAsyncKeyState(VK_LBUTTON) < 0)
 	{
 		std::wstring newButtonText(L"SPEED - ");
+		/*std::wstring newSN1L(L"1ST SNAKE LENGHT - ");
+		std::wstring newSN2L(L"2ND SNAKE LENGHT - ");
+		std::wstring newSN3L(L"3RD SNAKE LENGHT - ");
+		std::wstring newSN4L(L"4TH SNAKE LENGHT - ");*/
 		switch (button)
 		{
 		case 0:
@@ -188,7 +192,7 @@ bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime)
 			Sleep(200);
 			break;
 		case 9:
-			GameSpeed = GameSpeed + 0.01;
+			GameSpeed = GameSpeed + 0.02;
 			newButtonText += std::to_wstring(GameSpeed);
 			newButtonText.pop_back();
 			newButtonText.pop_back();
@@ -197,7 +201,7 @@ bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime)
 			menu.ChangeButtonText(2, 2, const_cast<wchar_t*>(newButtonText.c_str()));
 			break;
 		case 11:
-			GameSpeed = GameSpeed - 0.01;
+			GameSpeed = GameSpeed - 0.02;
 			newButtonText += std::to_wstring(GameSpeed);
 			newButtonText.pop_back();
 			newButtonText.pop_back();
@@ -205,16 +209,62 @@ bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime)
 			newButtonText.pop_back();
 			menu.ChangeButtonText(2, 2, const_cast<wchar_t*>(newButtonText.c_str()));
 			break;
+		/*case 20:
+			Snake1Length++;
+			newSN1L += std::to_wstring(Snake1Length);
+			menu.ChangeButtonText(2, 5, const_cast<wchar_t*>(newSN1L.c_str()));
+			break;
+		case 21:
+			Snake1Length--;
+			newSN1L += std::to_wstring(Snake1Length);
+			menu.ChangeButtonText(2, 5, const_cast<wchar_t*>(newSN1L.c_str()));
+			break;
+		case 22:
+			Snake2Length++;
+			newSN2L += std::to_wstring(Snake2Length);
+			menu.ChangeButtonText(2, 8, const_cast<wchar_t*>(newSN2L.c_str()));
+			break;
+		case 23:
+			Snake2Length--;
+			newSN2L += std::to_wstring(Snake2Length);
+			menu.ChangeButtonText(2, 8, const_cast<wchar_t*>(newSN2L.c_str()));
+			break;
+		case 24:
+			Snake3Length++;
+			newSN3L += std::to_wstring(Snake3Length);
+			menu.ChangeButtonText(2, 11, const_cast<wchar_t*>(newSN3L.c_str()));
+			break;
+		case 25:
+			Snake3Length--;
+			newSN3L += std::to_wstring(Snake3Length);
+			menu.ChangeButtonText(2, 11, const_cast<wchar_t*>(newSN3L.c_str()));
+			break;
+		case 26:
+			Snake4Length++;
+			newSN4L += std::to_wstring(Snake4Length);
+			menu.ChangeButtonText(2, 14, const_cast<wchar_t*>(newSN4L.c_str()));
+			break;
+		case 27:
+			Snake4Length--;
+			newSN4L += std::to_wstring(Snake4Length);
+			menu.ChangeButtonText(2, 14, const_cast<wchar_t*>(newSN4L.c_str()));
+			break;*/
 		case 18:
-			net.Connect("127.0.0.1", 25565, &menu, &rend, windowhandle);
-			net.VoteForStart();
-			singleplayer = false;
-			keyboardinputmodeText = false;
-			inmenu = false;
+			if (net.Connect("127.0.0.1", 25565, &menu, &rend, windowhandle))
+			{
+				net.VoteForStart();
+				singleplayer = false;
+				keyboardinputmodeText = false;
+				inmenu = false;
+			}
+			else
+			{
+				net.Disconnect();
+			}
 			break;
 		}
 	}
-	Sleep(10);
+	Sleep(20);
 	return true;
 }
 
@@ -292,7 +342,14 @@ void MultiplayerTick(POINT p)
 	{
 		snake1dir = tempDir1;
 	}
-	std::vector<PhysicalObject> *physics = net.SendDirGetPhysics((char)tempDir1);
+	char* lowCompressedPhsycics = net.SendDirGetCompressedPhysics(snake1dir);
+	char b[39 * 64];
+	for (int i = 0; i < 39 * 64; i++)
+	{
+		b[i] = lowCompressedPhsycics[i + 1];
+	}
+	rend.RenderFrame(b, menu.GetButtonsVectorForRenderer());
+	/*std::vector<PhysicalObject> *physics = net.SendDirGetPhysics((char)tempDir1);
 	if (physics != NULL)
 	{
 		rend.RenderFrame(*physics, menu.GetButtonsVectorForRenderer(), false);
@@ -301,7 +358,8 @@ void MultiplayerTick(POINT p)
 	{
 		std::vector<PhysicalObject> emptyPhysics;
 		rend.RenderFrame(emptyPhysics, menu.GetButtonsVectorForRenderer(), false);
-	}
+	}*/
+	Sleep(50);
 }
 
 void SortSnakesByLenght(Menu *menu, GameLogic *game)

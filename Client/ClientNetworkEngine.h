@@ -50,5 +50,6 @@ public:
 	std::vector<PhysicalObject>* SendDirGetPhysics(char dir);
 	void Disconnect();
 	static void ZeroBuff(char* firstByte, int sizeOfBuff);
-
+	//char[(36 + 3) * 64 + 1] SendDirGetCompressedPhysics(char dir);
+	char* SendDirGetCompressedPhysics(char dir);
 };

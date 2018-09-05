@@ -161,7 +161,7 @@ void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, std::vector<but
 	EndDraw();
 }
 
-void Renderer::RenderFrame(char compressedPhysics[GAMEFIELDHEIGTH * GAMEFIELDWIDTH], std::vector<button>& buttons)
+void Renderer::RenderFrame(char compressedPhysics[39 * 64], std::vector<button>& buttons)
 {
 	float backgroundR = 0.4f;
 	float backgroundG = 0.5f;
@@ -177,15 +177,15 @@ void Renderer::RenderFrame(char compressedPhysics[GAMEFIELDHEIGTH * GAMEFIELDWID
 	SDL_Rect rect;
 	rect.w = xFactor;
 	rect.h = yFactor;
-	for (int i = 0; i < GAMEFIELDHEIGTH + 3; i++)
+	for (int i = 0; i < 39 + 3; i++)
 	{
-		for (int j = 0; j < GAMEFIELDWIDTH; j++)
+		for (int j = 0; j < 64; j++)
 		{
 			rect.x = j * xFactor;
 			rect.y = renderHeigth - (i - 1) * yFactor;
-			if (compressedPhysics[i * GAMEFIELDWIDTH + j] != 0)
+			if (compressedPhysics[i * 64 + j] != 0)
 			{
-				DrawBitmap(bitmaps[compressedPhysics[i * GAMEFIELDWIDTH + j] - 1], &rect, NULL, opacity);
+				DrawBitmap(bitmaps[compressedPhysics[i * 64 + j] - 1], &rect, NULL, opacity);
 			}
 		}
 	}
