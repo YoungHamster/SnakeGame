@@ -10,4 +10,5 @@ struct connection
 	bool RecvedPhysics = false;
 	bool connected = false;
 	bool votedForStart = false;
+	bool CompressPhysics = true;
 };

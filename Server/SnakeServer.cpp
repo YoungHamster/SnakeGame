@@ -40,9 +40,9 @@ int main()
 	if (!networkengine.Init()) return -1;
 	//std::cout << sizeof(GameRoom);
 	std::cin.get();
-	std::cin.get();
+	//std::cin.get();
 	//std::cout << sizeof(GameRoom);
-	char* buff;
+	//char* buff;
 	//std::cin >> buff;
 	return 0;
 }
