@@ -13,9 +13,12 @@
 #include "Button.h"
 #include "SDL_Rect.h"
 
+#define CREATION_RENDER_TARGET_ERROR 1
+#define CREATION_BRUSH_ERROR 2
+
 #define BITMAPSNUMBER 39 + 41
-#define SCREENHEIGTH 768
-#define SCREENWIDTH 1366
+#define SCREENHEIGTH 1080
+#define SCREENWIDTH 1920
 #define GAMEFIELDHEIGTH (SCREENHEIGTH / 30)
 #define GAMEFIELDWIDTH (SCREENWIDTH / 30)
 
@@ -27,19 +30,22 @@ class Renderer
 private:
 	ID2D1Factory * factory;
 	ID2D1HwndRenderTarget* rendertarget;
-	ID2D1SolidColorBrush* brush;
+	//ID2D1SolidColorBrush* brush;
 
 	// 39 GameTextures + 41 ASCII Symbols
 	ID2D1Bitmap* bitmaps[BITMAPSNUMBER];
 
 	int GameFieldWidth = GAMEFIELDWIDTH;
 	int GameFieldHeigth = GAMEFIELDHEIGTH;
+
+	int LastRendererError = 0;
 public:
 	void SetGFW_GFH(int GFW, int GFH) { GameFieldWidth = GFW; GameFieldHeigth = GFH; }
 
 	bool Init(HWND windowhandle);
 	void RenderFrame(std::vector<PhysicalObject>& physics, std::vector<button>& buttons, bool menumode);
 	void RenderFrame(char compressedPhysics[GAMEFIELDHEIGTH * GAMEFIELDWIDTH], std::vector<button>& buttons);
+	void RenderFrame(char* compressedPhysics, std::vector<button>& buttons, int height, int width);
 	//void RenderFrame(std::vector<PhysicalObject>& physics, std::vector<button>& buttons);
 
 	void BeginDraw() { rendertarget->BeginDraw(); }
@@ -57,6 +63,8 @@ public:
 	void RenderButton(button button);
 
 	D2D1_SIZE_U GetRenderTargetSize();
+
+	int GetLastRendererError();
 
 };
 

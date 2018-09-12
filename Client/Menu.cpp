@@ -2,7 +2,7 @@
 
 void Menu::Init(Renderer* rend)
 {
-	for (int i = 0; i < 5; i++)
+	for (int i = 0; i < 8; i++)
 	{
 		AddPage();
 	}
@@ -23,6 +23,37 @@ void Menu::Init(Renderer* rend)
 	AddButton(2, false, true, 0, 360, const_cast <wchar_t*>(L"SPEED - 1.0"), 6, rend, -1);
 	AddButton(2, true, true, 0, 420, const_cast <wchar_t*>(L"-"), 4, rend, 11);
 
+	AddButton(2, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
+
+	AddButton(3, true, true, 0, 5, const_cast <wchar_t*>(L"BACK TO MAIN MENU"), 4, rend, 7);
+	AddButton(3, false, true, 0, 45, const_cast <wchar_t*>(L"1ST BLUE"), 3, rend, -1);
+	AddButton(3, false, true, 0, 75, const_cast <wchar_t*>(L"2ND GREEN"), 3, rend, -1);
+	AddButton(3, false, true, 0, 105, const_cast <wchar_t*>(L"3RD YELLOW"), 3, rend, -1);
+	AddButton(3, false, true, 0, 135, const_cast <wchar_t*>(L"4TH VIOLET"), 3, rend, -1);
+
+	AddButton(4, true, true, 0, 5, const_cast <wchar_t*>(L"BACK TO MAIN MENU"), 4, rend, 7);
+	AddButton(4, false, true, 0, 50, const_cast <wchar_t*>(L"UUID - UNKNOWN"), 4, rend, -1);
+	AddButton(4, false, true, 0, 100, const_cast <wchar_t*>(L"URID - UNKNOWN"), 4, rend, -1);
+	AddButton(4, true, true, 0, 150, const_cast <wchar_t*>(L"VOTE FOR START"), 5, rend, 20);
+
+	AddButton(5, true, true, 0, 275, const_cast <wchar_t*>(L"1 PLAYER"), 4, rend, 12);
+	AddButton(5, true, true, 0, 325, const_cast <wchar_t*>(L"2 PLAYERS"), 4, rend, 13);
+	AddButton(5, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
+
+	AddButton(6, true, true, 0, 50, const_cast <wchar_t*>(L"CONNECT"), 4, rend, 19);
+	AddButton(6, false, true, 0, 200, const_cast <wchar_t*>(L"IP"), 4, rend, 7);
+	AddButton(6, false, true, 0, 250, const_cast <wchar_t*>(L""), 4, rend, 7);
+	AddButton(6, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
+
+	AddButton(7, true, true, 0, 50, const_cast <wchar_t*>(L"NEW ROOM"), 4, rend, 2147483647);
+	/*AddButton(7, true, true, 0, 200, const_cast <wchar_t*>(L"IP"), 4, rend, 7);
+	AddButton(7, true, true, 0, 250, const_cast <wchar_t*>(L""), 4, rend, 7);*/
+	AddButton(7, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
+	/*AddButton(4, false, true, 0, 45, const_cast <wchar_t*>(L"1ST BLUE"), 3, rend, -1);
+	AddButton(4, false, true, 0, 75, const_cast <wchar_t*>(L"2ND GREEN"), 3, rend, -1);
+	AddButton(4, false, true, 0, 105, const_cast <wchar_t*>(L"3RD YELLOW"), 3, rend, -1);
+	AddButton(4, false, true, 0, 135, const_cast <wchar_t*>(L"4TH VIOLET"), 3, rend, -1);*/
+
 	/*AddButton(2, true, true, 0, 220, const_cast <wchar_t*>(L"+"), 3, rend, 20);
 	AddButton(2, false, true, 0, 245, const_cast <wchar_t*>(L"1ST SNAKE LENGHT - 5"), 3, rend, -1);
 	AddButton(2, true, true, 0, 270, const_cast <wchar_t*>(L"-"), 3, rend, 21);
@@ -38,20 +69,6 @@ void Menu::Init(Renderer* rend)
 	AddButton(2, true, true, 0, 470, const_cast <wchar_t*>(L"+"), 3, rend, 26);
 	AddButton(2, false, true, 0, 495, const_cast <wchar_t*>(L"4TH SNAKE LENGHT - 5"), 3, rend, -1);
 	AddButton(2, true, true, 0, 520, const_cast <wchar_t*>(L"-"), 3, rend, 27);*/
-
-	AddButton(2, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
-
-	AddButton(3, true, true, 0, 5, const_cast <wchar_t*>(L"BACK TO MAIN MENU"), 4, rend, 7);
-	AddButton(3, false, true, 0, 45, const_cast <wchar_t*>(L"1ST BLUE"), 3, rend, -1);
-	AddButton(3, false, true, 0, 75, const_cast <wchar_t*>(L"2ND GREEN"), 3, rend, -1);
-	AddButton(3, false, true, 0, 105, const_cast <wchar_t*>(L"3RD YELLOW"), 3, rend, -1);
-	AddButton(3, false, true, 0, 135, const_cast <wchar_t*>(L"4TH VIOLET"), 3, rend, -1);
-
-	AddButton(4, true, true, 0, 5, const_cast <wchar_t*>(L"BACK TO MAIN MENU"), 4, rend, 7);
-	AddButton(4, false, true, 0, 45, const_cast <wchar_t*>(L"1ST BLUE"), 3, rend, -1);
-	AddButton(4, false, true, 0, 75, const_cast <wchar_t*>(L"2ND GREEN"), 3, rend, -1);
-	AddButton(4, false, true, 0, 105, const_cast <wchar_t*>(L"3RD YELLOW"), 3, rend, -1);
-	AddButton(4, false, true, 0, 135, const_cast <wchar_t*>(L"4TH VIOLET"), 3, rend, -1);
 }
 
 std::vector<button>& Menu::GetButtonsVectorForRenderer()

@@ -42,6 +42,7 @@ bool ClientNetworkEngine::Connect(const char* ip, unsigned short port, Menu *men
 	{
 		return false;
 	}
+	std::wstring* roomsTexts = new std::wstring[roomsIdsNumber];
 	for (int i = 0; i < roomsIdsNumber; i++)
 	{
 		for (int j = 0; j < sizeof(int); j++)
@@ -49,16 +50,18 @@ bool ClientNetworkEngine::Connect(const char* ip, unsigned short port, Menu *men
 			roomIdconv.bytes[j] = buff[i * sizeof(int) + j + 9];
 		}
 		rooms[i] = roomIdconv.integer;
-		std::wstring newButtonText(L"Room ");
-		newButtonText += std::to_wstring(rooms[i]);
+		//std::wstring newButtonText(L"Room ");
+		/*newButtonText += std::to_wstring(rooms[i]);
 		newButtonText += L" UUID";
 		newButtonText += std::to_wstring(rooms[i]);
-		menu->AddButton(1, true, true, 0, 260 + i * 56, const_cast<wchar_t*>(newButtonText.c_str()), 6, renderer, rooms[i]);
+		menu->AddButton(1, true, true, 0, 260 + i * 56, const_cast<wchar_t*>(newButtonText.c_str()), 6, renderer, rooms[i]);*/
+		roomsTexts[i] = L"ROOM ";
+		roomsTexts[i] += std::to_wstring(rooms[i]);
+		menu->AddButton(7, true, true, 0, 120 + i * 56, const_cast<wchar_t*>(roomsTexts[i].c_str()), 6, renderer, rooms[i]);
 	}
-	menu->AddButton(1, true, true, 0, 204, const_cast<wchar_t*>(L"NEW ROOM"), 6, renderer, 2147483647);
 	std::vector<PhysicalObject> emptyPhysics;
 	renderer->RenderFrame(emptyPhysics, menu->GetButtonsVectorForRenderer(), false);
-	Sleep(1000);
+	//Sleep(1000);
 	bool playerChoosing = true;
 	int playerchoose = 2147483647;
 	while (playerChoosing)
@@ -75,7 +78,8 @@ bool ClientNetworkEngine::Connect(const char* ip, unsigned short port, Menu *men
 			}
 			if (button == 7)
 			{
-				menu->ChangePage(0);
+				menu->ChangePage(6);
+				Sleep(200);
 				return false;
 			}
 			if (button > -2000000000 && button < 2000000000 && button > 0 && button > 18)
@@ -111,6 +115,13 @@ bool ClientNetworkEngine::Connect(const char* ip, unsigned short port, Menu *men
 	}
 	roomId = roomIdconv.integer;
 	menu->ChangePage(4);
+	std::wstring* UUIDandURID = new std::wstring[2];
+	UUIDandURID[0] = const_cast<wchar_t*>(L"UUID - ");
+	UUIDandURID[1] = const_cast<wchar_t*>(L"URID - ");
+	UUIDandURID[1] += std::to_wstring(roomId);
+	UUIDandURID[0] += std::to_wstring(UUID);
+	menu->ChangeButtonText(4, 2, const_cast<wchar_t*>(UUIDandURID[0].c_str()));
+	menu->ChangeButtonText(4, 3, const_cast<wchar_t*>(UUIDandURID[1].c_str()));
 	return true;
 }
 
@@ -169,7 +180,7 @@ std::vector<PhysicalObject>* ClientNetworkEngine::SendDirGetPhysics(char dir)
 
 char* ClientNetworkEngine::SendDirGetCompressedPhysics(char dir)
 {
-	char* lowCompressedPhysics = new char[39 * 64 + 1];
+	char* lowCompressedPhysics = new char[39 * 66 + 1];
 	lowCompressedPhysics[0] = '\x07';
 	if (dir >= 0 && dir <= 4)
 	{
@@ -180,7 +191,7 @@ char* ClientNetworkEngine::SendDirGetCompressedPhysics(char dir)
 		lowCompressedPhysics[1] = '\0';
 	}
 	send(sock, lowCompressedPhysics, 2, NULL);
-	recv(sock, lowCompressedPhysics, 39 * 64 + 1, NULL);
+	recv(sock, lowCompressedPhysics, 39 * 66 + 1, NULL);
 	return lowCompressedPhysics;
 }
 

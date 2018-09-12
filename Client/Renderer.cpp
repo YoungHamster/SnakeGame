@@ -12,10 +12,17 @@ bool Renderer::Init(HWND windowHandle)
 		D2D1::RenderTargetProperties(),
 		D2D1::HwndRenderTargetProperties(windowHandle, D2D1::SizeU(rect.right, rect.bottom), D2D1_PRESENT_OPTIONS_IMMEDIATELY),
 		&rendertarget);
-	if (res != S_OK) return false;
+	if (res != S_OK)
+	{
+		LastRendererError = CREATION_RENDER_TARGET_ERROR;
+		return false;
+	}
 
-	res = rendertarget->CreateSolidColorBrush(D2D1::ColorF(0, 0, 0, 0), &brush);
-	if (res != S_OK) return false;
+	/*res = rendertarget->CreateSolidColorBrush(D2D1::ColorF(0, 0, 0, 0), &brush);
+	if (res != S_OK) 
+	{
+		return false;
+	}*/
 
 	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\BlueSnakeHeadUp.png", &bitmaps[0])) return false;
 	if (!LoadID2D1Bitmap(L"textures\\NewTextures\\BlueSnakeHeadDown.png", &bitmaps[1])) return false;
@@ -161,7 +168,7 @@ void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, std::vector<but
 	EndDraw();
 }
 
-void Renderer::RenderFrame(char compressedPhysics[39 * 64], std::vector<button>& buttons)
+void Renderer::RenderFrame(char compressedPhysics[GAMEFIELDHEIGTH * GAMEFIELDWIDTH], std::vector<button>& buttons)
 {
 	float backgroundR = 0.4f;
 	float backgroundG = 0.5f;
@@ -169,23 +176,58 @@ void Renderer::RenderFrame(char compressedPhysics[39 * 64], std::vector<button>&
 	float opacity = 0.7f;
 	int renderWidth = this->rendertarget->GetPixelSize().width;
 	int renderHeigth = this->rendertarget->GetPixelSize().height;
-	int xFactor = renderWidth / GameFieldWidth;
-	int yFactor = renderHeigth / GameFieldHeigth;
+	int xFactor = renderWidth / GAMEFIELDWIDTH;
+	int yFactor = renderHeigth / GAMEFIELDHEIGTH;
 	BeginDraw();
 	ClearScreen(backgroundR, backgroundG, backgroundB);
 
 	SDL_Rect rect;
 	rect.w = xFactor;
 	rect.h = yFactor;
-	for (int i = 0; i < 39 + 3; i++)
+	for (int i = 0; i < GAMEFIELDHEIGTH + 3 + 3; i++)
 	{
-		for (int j = 0; j < 64; j++)
+		for (int j = 0; j < GAMEFIELDWIDTH + 2; j++)
 		{
-			rect.x = j * xFactor;
+			rect.x = (j - 1) * xFactor;
 			rect.y = renderHeigth - (i - 1) * yFactor;
-			if (compressedPhysics[i * 64 + j] != 0)
+			if (compressedPhysics[i * (GAMEFIELDWIDTH + 2) + j] != 0 && compressedPhysics[i * 66 + j] > 0 && compressedPhysics[i * 66 + j] < 77)
 			{
-				DrawBitmap(bitmaps[compressedPhysics[i * 64 + j] - 1], &rect, NULL, opacity);
+				DrawBitmap(bitmaps[(compressedPhysics[i * (GAMEFIELDWIDTH + 2) + j]) - 1], &rect, NULL, opacity);
+			}
+		}
+	}
+	for (int i = 0; i < buttons.size(); i++)
+	{
+		RenderButton(buttons[i]);
+	}
+	EndDraw();
+}
+
+void Renderer::RenderFrame(char* compressedPhysics, std::vector<button>& buttons, int height, int width)
+{
+	float backgroundR = 0.4f;
+	float backgroundG = 0.5f;
+	float backgroundB = 0.4f;
+	float opacity = 0.7f;
+	int renderWidth = this->rendertarget->GetPixelSize().width;
+	int renderHeigth = this->rendertarget->GetPixelSize().height;
+	int xFactor = renderWidth / width;
+	int yFactor = renderHeigth / height;
+	BeginDraw();
+	ClearScreen(backgroundR, backgroundG, backgroundB);
+
+	SDL_Rect rect;
+	rect.w = xFactor;
+	rect.h = yFactor;
+	for (int i = 0; i < height; i++)
+	{
+		for (int j = 0; j < width; j++)
+		{
+			rect.x = (j - 1) * xFactor;
+			rect.y = renderHeigth - (i - 1) * yFactor;
+			if (compressedPhysics[i * width + j] != 0 && compressedPhysics[i * width + j] > 0 && compressedPhysics[i * width + j] < 77)
+			{
+				DrawBitmap(bitmaps[(compressedPhysics[i * width + j]) - 1], &rect, NULL, opacity);
 			}
 		}
 	}
@@ -384,4 +426,9 @@ int Renderer::CountTextWidth(const wchar_t* text, int Size)
 D2D1_SIZE_U Renderer::GetRenderTargetSize()
 {
 	return rendertarget->GetPixelSize();
+}
+
+int Renderer::GetLastRendererError()
+{
+	return LastRendererError;
 }

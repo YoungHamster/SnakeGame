@@ -29,6 +29,7 @@ static bool keyboardinputmodeText = true;
 std::wstring inputString;
 
 bool singleplayer = true;
+bool twoPlayerMode = false;
 
 /* Snake directions for user input */
 int snake1dir = LEFT;
@@ -97,6 +98,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 	{
 		SetWindowTextW(windowhandle, L"ERROR");
 		MessageBox(windowhandle, "ERROR!!! Failed to initialize renderer", "ERROR!!! Failed to initialize renderer", MB_OK);
+		if (rend.GetLastRendererError() == CREATION_RENDER_TARGET_ERROR)
+		{
+			MessageBox(windowhandle, "Failed to create HWND RENDER TARGET", "Failed to create HWND RENDER TARGET", MB_OK);
+		}
 		return -2;
 	}
 	menu.Init(&rend);
@@ -167,7 +172,19 @@ bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime)
 		std::wstring newSN4L(L"4TH SNAKE LENGHT - ");*/
 		switch (button)
 		{
+			/* Player clicked "START" button */
 		case 0:
+			menu.ChangePage(5);
+			//game.Reset();
+			//game.Init(GameFieldWidth, GameFieldHeight, Snake1Length, Snake2Length, Snake3Length, Snake4Length);
+			//keyboardinputmodeText = false;
+			//singleplayer = true;
+			//inmenu = false;
+			break;
+
+			/* Choose between 1 and 2 player mode */
+		case 12:
+			twoPlayerMode = false;
 			menu.ChangePage(3);
 			game.Reset();
 			game.Init(GameFieldWidth, GameFieldHeight, Snake1Length, Snake2Length, Snake3Length, Snake4Length);
@@ -175,22 +192,65 @@ bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime)
 			singleplayer = true;
 			inmenu = false;
 			break;
+		case 13:
+			twoPlayerMode = true;
+			menu.ChangePage(3);
+			game.Reset();
+			game.Init(GameFieldWidth, GameFieldHeight, Snake1Length, Snake2Length, Snake3Length, Snake4Length);
+			keyboardinputmodeText = false;
+			singleplayer = true;
+			inmenu = false;
+			break;
+			
+			/* Player clicked "MULTIPLAYER" button */
 		case 1:
 			menu.ChangePage(1);
 			break;
+
+			/* Enter IP, choose room and start multiplayer match */
+		case 18:
+			menu.ChangePage(6);
+			menu.ChangeButtonText(6, 1, const_cast<wchar_t*>(inputString.c_str()));
+			break;
+		case 19:
+			char ip[16];
+			for (int i = 0; i < 16; i++)
+			{
+				ip[i] = (char)inputString[i];
+			}
+			if (net.Connect(ip, 25565, &menu, &rend, windowhandle))
+			{
+				//net.VoteForStart();
+				singleplayer = false;
+				keyboardinputmodeText = false;
+				inmenu = false;
+			}
+			else
+			{
+				net.Disconnect();
+				menu.ChangePage(6);
+			}
+			break;
+		case 20:
+			if (net.VoteForStart())
+			{
+				menu.ChangeButtonText(4, 3, const_cast<wchar_t*>(L" "));
+			}
+			else
+			{
+				menu.ChangeButtonText(4, 3, const_cast<wchar_t*>(L" "));
+				rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), true);
+				Sleep(500);
+				menu.ChangeButtonText(4, 3, const_cast<wchar_t*>(L"VOTE FOR START"));
+			}
+			break;
+
+			/* Player clicked "OPTIONS" button */
 		case 2:
 			menu.ChangePage(OPTIONS);
 			break;
-		case 3:
-			gamerunning = false;
-			break;
-		case 7:
-			inmenu = true;
-			keyboardinputmodeText = true;
-			menu.ChangePage(0);
-			rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), true);
-			Sleep(200);
-			break;
+
+			/* Options handling */
 		case 9:
 			GameSpeed = GameSpeed + 0.02;
 			newButtonText += std::to_wstring(GameSpeed);
@@ -208,6 +268,20 @@ bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime)
 			newButtonText.pop_back();
 			newButtonText.pop_back();
 			menu.ChangeButtonText(2, 2, const_cast<wchar_t*>(newButtonText.c_str()));
+			break;
+
+			/* Player clicked "EXIT" button */
+		case 3:
+			gamerunning = false;
+			break;
+
+			/* Player clicked "BACK" button somewhere in menu*/
+		case 7:
+			inmenu = true;
+			keyboardinputmodeText = true;
+			menu.ChangePage(0);
+			rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), true);
+			Sleep(200);
 			break;
 		/*case 20:
 			Snake1Length++;
@@ -249,7 +323,7 @@ bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime)
 			newSN4L += std::to_wstring(Snake4Length);
 			menu.ChangeButtonText(2, 14, const_cast<wchar_t*>(newSN4L.c_str()));
 			break;*/
-		case 18:
+		/*case 18:
 			if (net.Connect("127.0.0.1", 25565, &menu, &rend, windowhandle))
 			{
 				net.VoteForStart();
@@ -261,7 +335,7 @@ bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime)
 			{
 				net.Disconnect();
 			}
-			break;
+			break;*/
 		}
 	}
 	Sleep(20);
@@ -296,7 +370,14 @@ void SingleplayerTick(POINT p, int* lastMoveTime)
 		{
 			snake2dir = tempDir2;
 		}
-		game.OneTick(snake1dir, 0, 0, 0);
+		if (!twoPlayerMode)
+		{
+			game.OneTick(0, snake1dir, 0, 0);
+		}
+		else
+		{
+			game.OneTick(snake2dir, snake1dir, 0, 0);
+		}
 		SortSnakesByLenght(&menu, &game);
 		//char lowCompressedPhsycics[(GAMEFIELDHEIGTH + 3) * GAMEFIELDWIDTH];
 		//AABB tempbox;
@@ -343,8 +424,8 @@ void MultiplayerTick(POINT p)
 		snake1dir = tempDir1;
 	}
 	char* lowCompressedPhsycics = net.SendDirGetCompressedPhysics(snake1dir);
-	char b[39 * 64];
-	for (int i = 0; i < 39 * 64; i++)
+	char b[39 * 66];
+	for (int i = 0; i < 39 * 66; i++)
 	{
 		b[i] = lowCompressedPhsycics[i + 1];
 	}
@@ -434,6 +515,10 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 			if (pkbs->vkCode == 0x08)
 			{
 				inputString.pop_back();
+			}
+			if (pkbs->vkCode == VK_OEM_PERIOD)
+			{
+				inputString.push_back(L'.');
 			}
 		}
 		else
