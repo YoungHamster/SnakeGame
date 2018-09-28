@@ -21,6 +21,7 @@ public:
 
 	bool currentlyUsingPDs = false;
 	connection players[4];
+	double GameSpeed = 1.0;
 
 	void Init(connection roomcreator);
 	int ConnectPlayer(connection player);
@@ -28,6 +29,9 @@ public:
 	bool AnyConnectedPlayers();
 	std::vector<PhysicalObject>& GetPhysicsForPlayer();
 	void ChangePlayerDirection(char dir, connection* player);
+	short GetSnakeLenght(int SnakeID);
+	std::vector<SnakeBlock>& GetSnake(int SnakeID);
+	
 
 	/*void o()
 	{

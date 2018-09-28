@@ -11,7 +11,7 @@
 
 struct SnakeBlock
 {
-	int PhysicalBodyID;
+	short PhysicalBodyID;
 	char Direction;
 };
 

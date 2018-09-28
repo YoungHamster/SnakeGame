@@ -11,4 +11,5 @@ struct connection
 	bool connected = false;
 	bool votedForStart = false;
 	bool CompressPhysics = true;
+	int GameDataProtocol = 0;
 };

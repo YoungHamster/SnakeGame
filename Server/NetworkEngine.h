@@ -16,25 +16,43 @@ static bool serverrunning = true;
 union PhysicalObjectToBytes
 {
 	PhysicalObject obj;
-	char bytes[sizeof(PhysicalObject)];
+	char bytes[sizeof(PhysicalObject)]; // 9 bytes
 };
 
 union ULLToBytes
 {
 	unsigned long long integer;
-	char bytes[8];
+	char bytes[sizeof(unsigned long long)]; // 8 bytes
 };
 
 union IntToBytes
 {
 	int integer;
-	char bytes[4];
+	char bytes[sizeof(int)]; // 4 bytes
 };
 
 union WcharToBytes
 {
 	wchar_t wchar;
-	char bytes[2];
+	char bytes[sizeof(wchar_t)]; // 2 bytes
+};
+
+union ShortToBytes
+{
+	short integer;
+	char bytes[sizeof(short)]; // 2 bytes
+};
+
+union DoubleToBytes
+{
+	double number;
+	char bytes[sizeof(double)]; // 8 bytes
+};
+
+union SnakeBlockToBytes
+{
+	SnakeBlock block;
+	char bytes[sizeof(SnakeBlock)];
 };
 
 class NetworkEngine
@@ -54,7 +72,7 @@ public:
 	static bool AnyActiveRooms(GameRoom *firstRoom);
 	static void AsyncRoomThr(GameRoom *room);
 	static void AsyncUserConnectionThr(GameRoom *room, connection *player);
-	static void SendPhysicsToClient(GameRoom *room, connection *client, std::vector<PhysicalObject>& physics);
+	static void SendPhysicsToClient(GameRoom *room, connection *client);
 	static const char* WSAErrorToString();
 	static unsigned int randNum();
 	static void ZeroBuff(char *firstByte, int sizeOfBuff);

@@ -53,6 +53,16 @@ std::vector<PhysicalObject>& GameRoom::GetPhysicsForPlayer()
 	return game.physics;
 }
 
+short GameRoom::GetSnakeLenght(int SnakeID)
+{
+	return game.snakes[SnakeID].size();
+}
+
+std::vector<SnakeBlock>& GameRoom::GetSnake(int SnakeID)
+{
+	return game.snakes[SnakeID];
+}
+
 void GameRoom::ChangePlayerDirection(char dir, connection* player)
 {
 	while (currentlyUsingPDs)

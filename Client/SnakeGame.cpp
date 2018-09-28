@@ -8,9 +8,7 @@
 #include "ReadInput.h"
 #include "Menu.h"
 #include "ClientNetworkEngine.h"
-#ifndef RENDERER
 #include "Renderer.h"
-#endif
 
 struct SnakeNameForSortingByLenght
 {
@@ -77,7 +75,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 	RECT rect = { 0, 0, SCREENWIDTH, SCREENHEIGTH };
 	AdjustWindowRectEx(&rect, WS_OVERLAPPEDWINDOW, false, WS_EX_OVERLAPPEDWINDOW);
 
-	HWND windowhandle = CreateWindowW(L"MainWindow", L"SnakeGame-DirectX", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, hInstance, 0);
+	HWND windowhandle = CreateWindowW(L"MainWindow", L"SnakeGame", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, hInstance, 0);
 
 	if (!windowhandle) return 1;
 
@@ -175,11 +173,6 @@ bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime)
 			/* Player clicked "START" button */
 		case 0:
 			menu.ChangePage(5);
-			//game.Reset();
-			//game.Init(GameFieldWidth, GameFieldHeight, Snake1Length, Snake2Length, Snake3Length, Snake4Length);
-			//keyboardinputmodeText = false;
-			//singleplayer = true;
-			//inmenu = false;
 			break;
 
 			/* Choose between 1 and 2 player mode */
@@ -210,7 +203,8 @@ bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime)
 			/* Enter IP, choose room and start multiplayer match */
 		case 18:
 			menu.ChangePage(6);
-			menu.ChangeButtonText(6, 1, const_cast<wchar_t*>(inputString.c_str()));
+			//inputString.data();
+			menu.ChangeButtonText(6, 2, const_cast<wchar_t*>(inputString.data()));
 			break;
 		case 19:
 			char ip[16];
@@ -221,6 +215,7 @@ bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime)
 			if (net.Connect(ip, 25565, &menu, &rend, windowhandle))
 			{
 				//net.VoteForStart();
+				menu.ChangePage(7);
 				singleplayer = false;
 				keyboardinputmodeText = false;
 				inmenu = false;
@@ -379,28 +374,6 @@ void SingleplayerTick(POINT p, int* lastMoveTime)
 			game.OneTick(snake2dir, snake1dir, 0, 0);
 		}
 		SortSnakesByLenght(&menu, &game);
-		//char lowCompressedPhsycics[(GAMEFIELDHEIGTH + 3) * GAMEFIELDWIDTH];
-		//AABB tempbox;
-		//for (int i = 0; i < GAMEFIELDHEIGTH + 3; i++)
-		//{
-		//	for (int j = 0; j < GAMEFIELDWIDTH; j++)
-		//	{
-		//		tempbox.min.x = j;
-		//		tempbox.min.y = i - 2 ;
-		//		tempbox.max.x = j + 1;
-		//		tempbox.max.y = i + 1 - 2;
-		//		lowCompressedPhsycics[i * GAMEFIELDWIDTH + j] = 0;
-		//		for (int n = 0; n < game.physics.size(); n++)
-		//		{
-		//			if (AABBvsAABB(game.physics[n].borders, tempbox) && game.physics[n].type != DEAD_SNAKE)
-		//			{
-		//				lowCompressedPhsycics[i * GAMEFIELDWIDTH + j] = game.physics[n].type;
-		//				//n = game.physics.size();
-		//			}
-		//		}
-		//	}
-		//}
-		//rend.RenderFrame(lowCompressedPhsycics, menu.GetButtonsVectorForRenderer());
 		rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), false);
 		*lastMoveTime = clock();
 	}
@@ -429,17 +402,7 @@ void MultiplayerTick(POINT p)
 	{
 		b[i] = lowCompressedPhsycics[i + 1];
 	}
-	rend.RenderFrame(b, menu.GetButtonsVectorForRenderer());
-	/*std::vector<PhysicalObject> *physics = net.SendDirGetPhysics((char)tempDir1);
-	if (physics != NULL)
-	{
-		rend.RenderFrame(*physics, menu.GetButtonsVectorForRenderer(), false);
-	}
-	else
-	{
-		std::vector<PhysicalObject> emptyPhysics;
-		rend.RenderFrame(emptyPhysics, menu.GetButtonsVectorForRenderer(), false);
-	}*/
+	//rend.RenderFrame(b, menu.GetButtonsVectorForRenderer());
 	Sleep(50);
 }
 
@@ -478,10 +441,6 @@ void SortSnakesByLenght(Menu *menu, GameLogic *game)
 	std::wstring str4(L"4TH ");
 	str4 += std::wstring(lenghts[3].name);
 	menu->ChangeButtonText(3, 4, const_cast<wchar_t*>(str4.c_str()));
-	/*menu->ChangeButtonText(3, 1, const_cast<wchar_t*>(str1.c_str()));
-	menu->ChangeButtonText(3, 1, strcatW(L"2ND ", lenghts[1].name));
-	menu->ChangeButtonText(3, 1, strcatW(L"3RD ", lenghts[2].name));
-	menu->ChangeButtonText(3, 1, strcatW(L"4TH ", lenghts[3].name));*/
 }
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -514,11 +473,18 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 			}
 			if (pkbs->vkCode == 0x08)
 			{
-				inputString.pop_back();
+				if (inputString.length() > 0)
+				{
+					inputString.pop_back();
+				}
 			}
 			if (pkbs->vkCode == VK_OEM_PERIOD)
 			{
 				inputString.push_back(L'.');
+			}
+			if (pkbs->vkCode == VK_SPACE)
+			{
+				inputString.push_back(L' ');
 			}
 		}
 		else

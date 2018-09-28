@@ -13,7 +13,7 @@ void Menu::Init(Renderer* rend)
 
 	AddButton(1, false, true, 0, 80, const_cast <wchar_t*>(L"MULTIPLAYER"), 10, rend, -1);
 	//AddButton(1, false, true, 640, 320, const_cast <wchar_t*>(L"COMING"), 6, rend, 5);
-	AddButton(1, true, true, 0, 360, const_cast <wchar_t*>(L"CONNECT"), 6, rend, 18);
+	AddButton(1, true, true, 0, 360, const_cast <wchar_t*>(L"NEW SERVER"), 6, rend, 18);
 	//AddButton(1, false, true, 640, 400, const_cast <wchar_t*>(L"SOON"), 6, rend, 6);
 	AddButton(1, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
 
@@ -41,7 +41,7 @@ void Menu::Init(Renderer* rend)
 	AddButton(5, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
 
 	AddButton(6, true, true, 0, 50, const_cast <wchar_t*>(L"CONNECT"), 4, rend, 19);
-	AddButton(6, false, true, 0, 200, const_cast <wchar_t*>(L"IP"), 4, rend, 7);
+	AddButton(6, false, true, 0, 215, const_cast <wchar_t*>(L"IP"), 4, rend, 7);
 	AddButton(6, false, true, 0, 250, const_cast <wchar_t*>(L""), 4, rend, 7);
 	AddButton(6, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
 
@@ -89,7 +89,10 @@ void Menu::AddButton(int PageID, bool Clickable, bool Centered, int x, int y, wc
 
 void Menu::ChangeButtonText(int PageID, int ButtonID, wchar_t* Text)
 {
-	//delete[] pages[PageID].buttons[ButtonID].Text;
+	/*if (pages[PageID].buttons[ButtonID].Text)
+	{
+		delete[] pages[PageID].buttons[ButtonID].Text;
+	}*/
 	pages[PageID].buttons[ButtonID].Text = Text;
 }
 
@@ -101,4 +104,29 @@ int Menu::CheckMouseCollision(POINT mouse)
 void Menu::ChangePage(int PageID)
 {
 	CurrentPageID = PageID;
+}
+
+void Menu::RegisterEvent(MenuEvents Event, int AdditionalInfoi, double* AdditionalInfod, char* AdditionalInfoc)
+{
+	MenuEvent NewEvent;
+	NewEvent.Event = Event;
+	NewEvent.AdditionalInfoi = AdditionalInfoi;
+	NewEvent.AdditionalInfod = AdditionalInfod;
+	NewEvent.AdditionalInfoc = AdditionalInfoc;
+	HandleEvent(NewEvent);
+}
+
+void Menu::HandleEvent(MenuEvent Event)
+{
+	for (int i = 0; i < NumberOfTransitions; i++)
+	{
+		if (transitions[i].CurrentState == CurrentState && transitions[i].Event == Event.Event)
+		{
+			CurrentState = transitions[i].TargetState;
+			if (transitions[i].method != NULL)
+			{
+				transitions[i].method(this, Event);
+			}
+		}
+	}
 }

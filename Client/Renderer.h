@@ -1,5 +1,10 @@
 #pragma once
 
+
+/* Part of windows 10 sdk in visual studio */
+#pragma comment(lib, "windowscodecs.lib")
+#pragma comment(lib, "d2d1.lib")
+
 #include <Windows.h>
 #include <d2d1.h>
 #include <vector>
@@ -40,19 +45,18 @@ private:
 
 	int LastRendererError = 0;
 public:
-	void SetGFW_GFH(int GFW, int GFH) { GameFieldWidth = GFW; GameFieldHeigth = GFH; }
 
 	bool Init(HWND windowhandle);
 	void RenderFrame(std::vector<PhysicalObject>& physics, std::vector<button>& buttons, bool menumode);
-	void RenderFrame(char compressedPhysics[GAMEFIELDHEIGTH * GAMEFIELDWIDTH], std::vector<button>& buttons);
-	void RenderFrame(char* compressedPhysics, std::vector<button>& buttons, int height, int width);
+	//void RenderFrame(char compressedPhysics[GAMEFIELDHEIGTH * GAMEFIELDWIDTH], std::vector<button>& buttons);
+	//void RenderFrame(char* compressedPhysics, std::vector<button>& buttons, int height, int width);
 	//void RenderFrame(std::vector<PhysicalObject>& physics, std::vector<button>& buttons);
 
 	void BeginDraw() { rendertarget->BeginDraw(); }
 	void EndDraw() { rendertarget->EndDraw(); }
 	void ClearScreen(float r, float g, float b);
 	bool LoadID2D1Bitmap(LPCWSTR filename, ID2D1Bitmap **ppBitmap);
-	void DrawBitmap(ID2D1Bitmap* bmp, SDL_Rect* rect, SDL_Rect* srcrect, float opacity);
+	void DrawBitmap(ID2D1Bitmap* bmp, RECT* rect, RECT* srcrect, float opacity);
 
 	/* Counts text width in pixels */
 	int CountTextWidth(const wchar_t* text, int Size);
@@ -94,23 +98,3 @@ inline wchar_t* strcatW(const wchar_t *str1, const wchar_t *str2)
 	}
 	return str;
 }
-//
-//inline int CountTextWidth(const wchar_t* text, int Size)
-//{
-//	int Width = 0;
-//	int CurrentCharacterInBitmapsArrayID = 77;
-//	int currentW = 0;
-//	for (int i = 0; i < wstrlen(text); i++)
-//	{
-//		if (text[i] >= L'A' && text[i] <= L'Z') { CurrentCharacterInBitmapsArrayID = text[i] - 26; }
-//		if (text[i] == L'+') { CurrentCharacterInBitmapsArrayID = 65; }
-//		if (text[i] == L'-') { CurrentCharacterInBitmapsArrayID = 66; }
-//		if (text[i] >= L'0' && text[i] <= L'9') { CurrentCharacterInBitmapsArrayID = text[i] + 19; }
-//		if (text[i] == L' ') { CurrentCharacterInBitmapsArrayID = 77; }
-//		if (text[i] == L'.') { CurrentCharacterInBitmapsArrayID = 78; }
-//		if (text[i] == L'!') { CurrentCharacterInBitmapsArrayID = 79; }
-//		currentW = bitmapsHWs[CurrentCharacterInBitmapsArrayID] * Size;//bitmaps[CurrentCharacterInBitmapsArrayID]->GetPixelSize().width;
-//		Width = Width + currentW + Size;
-//	}
-//	return Width;
-//}
