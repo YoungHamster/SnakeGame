@@ -13,6 +13,8 @@
 #include "GameLogic.h"
 #include "Console.h"
 
+#define CREATE_NEW_ROOM_ON_SERVER 2147483647
+
 enum NetStates
 {
 	SOMEERROR,
@@ -85,8 +87,7 @@ private:
 	bool SynchronizeGame();
 	NetStates GameTick(NetEngineInput input);
 public:
-	bool Connect(const char* ip, unsigned short port, Menu *menu, Renderer *renderer, HWND windowhandle);
-	int* ConnectPart1(const char* ip, unsigned short port, Menu *menu, Renderer *renderer, HWND windowhandle, int* numberOfRooms);
+	int* ConnectPart1(const char* ip, unsigned short port, Menu *menu, int* numberOfRooms);
 	bool ConnectPart2(int playerChoose);
 	bool VoteForStart();
 	std::vector<PhysicalObject>* SendDirGetPhysics(char dir);

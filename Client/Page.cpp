@@ -27,9 +27,10 @@ bool Page::AddButton(button button)
 //	return true;
 //}
 
-bool Page::AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text, int Size, Renderer* renderer, int UBID)
+bool Page::AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text, int Size, Renderer* renderer, int UBID, int AdditionalInfo)
 {
 	button button;
+	button.AdditionalInfo = AdditionalInfo;
 	button.UBID = UBID;
 	button.Clickable = Clickable;
 	button.Centered = Centered;

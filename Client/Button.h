@@ -11,8 +11,7 @@ struct button
 	int Size;
 	wchar_t *Text;
 	int UBID;
-	//void(*whattodo)(Menu *menu);
-	//void(*whattodo)() = NULL;
+	int AdditionalInfo;
 };
 
 struct CheckBox
