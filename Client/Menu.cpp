@@ -9,28 +9,28 @@ void Menu::FillTransitions()
 
 		/* FSM transitions table */
 		/*             Current menu state         Menu event             Target state               Helping function       Transition number in transitions array */
-		FillTransition(MainMenu,                  Start,                 OneOrTwoPlayersChoosePage, NULL,                       0);
-		FillTransition(OneOrTwoPlayersChoosePage, Start1pMode,           Game,                      NULL,                       1);
-		FillTransition(OneOrTwoPlayersChoosePage, Start2pMode,           Game,                      NULL,                       2);
-		FillTransition(MainMenu,                  GoToMultiplayer,       Multiplayer,               NULL,                       3);
-		FillTransition(MainMenu,                  GoToOptions,           Options,                   NULL,                       4);
-		FillTransition(MainMenu,                  Exit,                  ExitGame,                  NULL,                       5);
-		FillTransition(Multiplayer,               TryConnectToServer,    Multiplayer,               FuncConnectToServer,        6);
-		FillTransition(Multiplayer,               ConnectedToServer,     MultiplayerChoosingRoom,   NULL,                       7);
-		FillTransition(MultiplayerChoosingRoom,   ChooseRoom,            MultiplayerWaitingInRoom,  FuncChooseRoom,             8);
-		FillTransition(MultiplayerWaitingInRoom,  VoteForStart,          MultiplayerWaitingStart,   FuncVoteForStart,           9);
-		FillTransition(MultiplayerWaitingStart,   MultiplayerMatchStart, MultiplayerGame,		    NULL,                       10);
-		FillTransition(Options,                   IncreaseGameSpeed,     Options,                   FuncIncreaseGameSpeed,      11);
-		FillTransition(Options,                   DecreaseGameSpeed,     Options,                   FuncDecreaseGameSpeed,      12);
-		FillTransition(OneOrTwoPlayersChoosePage, GoBack,                MainMenu,                  FuncWaitBetweenTransitions, 13);
-		FillTransition(Multiplayer,               GoBack,                MainMenu,                  FuncWaitBetweenTransitions, 14);
-		FillTransition(MultiplayerChoosingRoom,   GoBack,                Multiplayer,               FuncWaitBetweenTransitions, 15);
-		FillTransition(MultiplayerWaitingInRoom,  GoBack,                Multiplayer,               FuncWaitBetweenTransitions, 16);
-		FillTransition(MultiplayerWaitingStart,   GoBack,                Multiplayer,               FuncWaitBetweenTransitions, 17);
-		FillTransition(Options,                   GoBack,                MainMenu,                  FuncWaitBetweenTransitions, 18);
-		FillTransition(Game,                      GoBack,                MainMenu,                  FuncWaitBetweenTransitions, 19);
-		FillTransition(GameOver,                  GoBack,                MainMenu,                  FuncWaitBetweenTransitions, 20);
-		FillTransition(MultiplayerGame,           GoBack,                Multiplayer,               FuncWaitBetweenTransitions, 21);
+		FillTransition(MainMenu,                  Start,                 OneOrTwoPlayersChoosePage, NULL,                  0);
+		FillTransition(OneOrTwoPlayersChoosePage, Start1pMode,           Game,                      NULL,                  1);
+		FillTransition(OneOrTwoPlayersChoosePage, Start2pMode,           Game,                      NULL,                  2);
+		FillTransition(MainMenu,                  GoToMultiplayer,       Multiplayer,               NULL,                  3);
+		FillTransition(MainMenu,                  GoToOptions,           Options,                   NULL,                  4);
+		FillTransition(MainMenu,                  Exit,                  ExitGame,                  NULL,                  5);
+		FillTransition(Multiplayer,               TryConnectToServer,    Multiplayer,               FuncConnectToServer,   6);
+		FillTransition(Multiplayer,               ConnectedToServer,     MultiplayerChoosingRoom,   NULL,                  7);
+		FillTransition(MultiplayerChoosingRoom,   ChooseRoom,            MultiplayerWaitingInRoom,  FuncChooseRoom,        8);
+		FillTransition(MultiplayerWaitingInRoom,  VoteForStart,          MultiplayerWaitingStart,   FuncVoteForStart,      9);
+		FillTransition(MultiplayerWaitingStart,   MultiplayerMatchStart, MultiplayerGame,		    NULL,                  10);
+		FillTransition(Options,                   IncreaseGameSpeed,     Options,                   FuncIncreaseGameSpeed, 11);
+		FillTransition(Options,                   DecreaseGameSpeed,     Options,                   FuncDecreaseGameSpeed, 12);
+		FillTransition(OneOrTwoPlayersChoosePage, GoBack,                MainMenu,                  NULL,                  13);
+		FillTransition(Multiplayer,               GoBack,                MainMenu,                  NULL,                  14);
+		FillTransition(MultiplayerChoosingRoom,   GoBack,                Multiplayer,               NULL,                  15);
+		FillTransition(MultiplayerWaitingInRoom,  GoBack,                Multiplayer,               NULL,                  16);
+		FillTransition(MultiplayerWaitingStart,   GoBack,                Multiplayer,               NULL,                  17);
+		FillTransition(Options,                   GoBack,                MainMenu,                  NULL,                  18);
+		FillTransition(Game,                      GoBack,                MainMenu,                  NULL,                  19);
+		FillTransition(GameOver,                  GoBack,                MainMenu,                  NULL,                  20);
+		FillTransition(MultiplayerGame,           GoBack,                Multiplayer,               NULL,                  21);
 	}
 
 void Menu::Init(Renderer* rend, double* gameSpeed, std::wstring* inputString)
@@ -43,7 +43,7 @@ void Menu::Init(Renderer* rend, double* gameSpeed, std::wstring* inputString)
 	pages[MainMenu].AddButton(                 true, true, 0, 290, const_cast<wchar_t*>(L"MULTIPLAYER"),       10, rend, GoToMultiplayer,    0);
 	pages[MainMenu].AddButton(                 true, true, 0, 470, const_cast<wchar_t*>(L"OPTIONS"),           10, rend, GoToOptions,        0);
 	pages[MainMenu].AddButton(                 true, true, 0, 630, const_cast<wchar_t*>(L"EXIT"),              10, rend, Exit,               0);
-	pages[Multiplayer].AddButton(              true, true, 0, 200, const_cast<wchar_t*>(L"CONNECT"),           10, rend, TryConnectToServer, 0);
+	pages[Multiplayer].AddButton(              true, true, 0, 200, const_cast<wchar_t*>(L"COMING SOON"),           10, rend, -1, 0);
 	pages[Multiplayer].AddButton(              true, true, 0, 400, const_cast<wchar_t*>(inputString->c_str()), 10, rend, TryConnectToServer, 0);
 	pages[Multiplayer].AddButton(              true, true, 0, 600, const_cast<wchar_t*>(L"BACK"),              10, rend, GoBack,             0);
 	pages[OneOrTwoPlayersChoosePage].AddButton(true, true, 0, 200, const_cast<wchar_t*>(L"1 PLAYER MODE"),     10, rend, Start1pMode,        0);
@@ -54,7 +54,7 @@ void Menu::Init(Renderer* rend, double* gameSpeed, std::wstring* inputString)
 	pages[MultiplayerWaitingInRoom].AddButton( true, true, 0, 400, const_cast<wchar_t*>(L"VOTE FOR START"),    10, rend, VoteForStart,       0);
 	pages[MultiplayerWaitingInRoom].AddButton( true, true, 0, 600, const_cast<wchar_t*>(L"BACK"),              10, rend, GoBack,             0);
 	pages[Options].AddButton(                  true, true, 0, 200, const_cast<wchar_t*>(L"+"),                 10, rend, IncreaseGameSpeed,  0);
-	pages[Options].AddButton(                  true, true, 0, 300, const_cast<wchar_t*>(L"1.0"),               10, rend, -1,                 0);
+	pages[Options].AddButton(                  false,true, 0, 300, const_cast<wchar_t*>(L"1.0"),               10, rend, -1,                 0);
 	pages[Options].AddButton(                  true, true, 0, 400, const_cast<wchar_t*>(L"-"),                 10, rend, DecreaseGameSpeed,  0);
 	pages[Options].AddButton(                  true, true, 0, 600, const_cast<wchar_t*>(L"BACK"),              10, rend, GoBack,             0);
 	pages[Game].AddButton(                     true, true, 0, 20,  const_cast<wchar_t*>(L"BACK"),              4,  rend, GoBack,             0);
@@ -137,7 +137,6 @@ void Menu::ChangeButtonText(int PageID, int ButtonID, wchar_t* Text)
 
 MenuStates Menu::HandleMouseClick(POINT mouse)
 {
-	out.Write("HandledMouseClick\n");
 	int buttonid = pages[CurrentState].CheckMouseCollisions(mouse);
 	if (buttonid < 0 || buttonid > pages[CurrentState].buttons.size())
 	{
@@ -167,16 +166,16 @@ MenuStates Menu::HandleMouseClick(POINT mouse)
 }
 void Menu::RegisterEvent(MenuEvents Event, int AdditionalInfoi, double* AdditionalInfod, const char* AdditionalInfoc)
 {
-	out.Write("Registered event\n");
+	//out.Write("Registered event\n");
 	MenuEvent NewEvent;
 	NewEvent.Event = Event;
 	NewEvent.AdditionalInfoi = AdditionalInfoi;
 	NewEvent.AdditionalInfod = AdditionalInfod;
 	NewEvent.AdditionalInfoc = AdditionalInfoc;
-	out.Write(std::string("Prev state ") + std::to_string((int)CurrentState) + std::string("\n"));
-	out.Write(std::string("Event ") + std::to_string((int)Event) + std::string("\n"));
+	//out.Write(std::string("Prev state ") + std::to_string((int)CurrentState) + std::string("\n"));
+	//out.Write(std::string("Event ") + std::to_string((int)Event) + std::string("\n"));
 	HandleEvent(NewEvent);
-	out.Write(std::string("New state ") + std::to_string((int)CurrentState) + std::string("\n"));
+	//out.Write(std::string("New state ") + std::to_string((int)CurrentState) + std::string("\n"));
 }
 
 void Menu::HandleEvent(MenuEvent Event)

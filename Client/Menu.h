@@ -114,16 +114,47 @@ inline void FuncVoteForStart(Menu* menu, MenuEvent Event)
 inline void FuncIncreaseGameSpeed(Menu* menu, MenuEvent Event)
 {
 	*Event.AdditionalInfod += 0.02;
-	menu->ChangeButtonText(Options, 1, const_cast<wchar_t*>(std::to_wstring(*Event.AdditionalInfod).c_str()));
+	static std::wstring str;
+	str.clear();
+	str = std::to_wstring(*Event.AdditionalInfod);
+	if (str.size() >= 6)
+	{
+		try
+		{
+			str.pop_back();
+			str.pop_back();
+			str.pop_back();
+			str.pop_back();
+		}
+		catch (std::out_of_range)
+		{
+			str.clear();
+			str = std::to_wstring(*Event.AdditionalInfod);
+		}
+	}
+	menu->ChangeButtonText(Options, 1, const_cast<wchar_t*>(str.c_str()));
 }
 
 inline void FuncDecreaseGameSpeed(Menu* menu, MenuEvent Event)
 {
 	*Event.AdditionalInfod -= 0.02;
-	menu->ChangeButtonText(Options, 1, const_cast<wchar_t*>(std::to_wstring(*Event.AdditionalInfod).c_str()));
-}
-
-inline void FuncWaitBetweenTransitions(Menu* menu, MenuEvent Event)
-{
-	//Sleep(50);
+	static std::wstring str;
+	str.clear();
+	str = std::to_wstring(*Event.AdditionalInfod);
+	if (str.size() >= 6)
+	{
+		try
+		{
+			str.pop_back();
+			str.pop_back();
+			str.pop_back();
+			str.pop_back();
+		}
+		catch (std::out_of_range)
+		{
+			str.clear();
+			str = std::to_wstring(*Event.AdditionalInfod);
+		}
+	}
+	menu->ChangeButtonText(Options, 1, const_cast<wchar_t*>(str.c_str()));
 }

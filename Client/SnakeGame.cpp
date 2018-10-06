@@ -125,8 +125,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 			ScreenToClient(windowhandle, &p);
 			if (inmenu)
 			{
-				Sleep(100 / GameSpeed / 2);
-				game.OneTick(0, 0, 0, 0);
+				Sleep(33);
+				if (clock() - lastmovetime >= 75 / GameSpeed)
+				{
+					game.OneTick(0, 0, 0, 0);
+					lastmovetime = clock();
+				}
 				//menu.HandleMouseMovement(p);
 				switch (menu.GetMenuState())
 				{
