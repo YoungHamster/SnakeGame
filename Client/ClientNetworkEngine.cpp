@@ -1,6 +1,6 @@
 #include "ClientNetworkEngine.h"
 
-int* ClientNetworkEngine::ConnectPart1(const char* ip, unsigned short port, Menu *menu, int* numberOfRooms)
+int* ClientNetworkEngine::ConnectPart1(const char* ip, unsigned short port, int* numberOfRooms)
 {
 	ConnectionState = HANDSHAKING;
 	game.Init(64, 36, 5, 5, 5, 5);

@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include <chrono>
+#include <Windowsx.h>
 
 #include "Random.h"
 #include "Physics.h"
@@ -34,7 +35,8 @@ int snake1dir = LEFT;
 int snake2dir = LEFT;
 static int tempDir1 = LEFT;
 static int tempDir2 = LEFT;
-HHOOK hhook = NULL;
+HHOOK keyboardHook = NULL;
+HHOOK mouseHook = NULL;
 
 int Snake1Length = 5;
 int Snake2Length = 5;
@@ -44,10 +46,12 @@ double GameSpeed = 1;
 short GameFieldWidth = GAMEFIELDWIDTH;
 short GameFieldHeight = GAMEFIELDHEIGTH;
 
-bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime);
+bool MenuTick(POINT p, int* lastMoveTime);
 void SingleplayerTick(POINT p, int* lastMoveTime);
 void MultiplayerTick(POINT p);
 LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK KeyboardProc(int code, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 void SortSnakesByLenght(Menu *menu, GameLogic *game);
@@ -84,8 +88,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 	MSG msg;
 	msg.message = WM_NULL;
 
+	/* Keyboard input */
+	/*hhook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, 0, 0); low level input */
+	keyboardHook = SetWindowsHookEx(WH_KEYBOARD, KeyboardProc, 0, 0);
+	/* Mouse Input */
+	mouseHook = SetWindowsHookEx(WH_MOUSE, MouseProc, 0, 0);
+
 	/* Game modules initialization */
-	int t = clock();
 	if (!game.Init(GameFieldWidth, GameFieldHeight, Snake1Length, Snake2Length, Snake3Length, Snake4Length))
 	{
 		SetWindowTextW(windowhandle, L"ERROR");
@@ -102,7 +111,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 		}
 		return -2;
 	}
-	menu.Init(&rend);
+	menu.Init(&rend, &GameSpeed, &inputString);
 
 	/* Game timer */
 	int lastmovetime = 0;
@@ -111,9 +120,6 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 	POINT p;
 	GetCursorPos(&p);
 	ScreenToClient(windowhandle, &p);
-	
-	/* Keyboard input */
-	hhook = SetWindowsHookEx(WH_KEYBOARD_LL, LowLevelKeyboardProc, 0, 0);
 
 	/* Main loop */
 	while (msg.message != WM_QUIT && gamerunning)
@@ -128,8 +134,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 			ScreenToClient(windowhandle, &p);
 			if (inmenu)
 			{
-				
-				MenuTick(p, windowhandle, &lastmovetime);
+				Sleep(10);
+				game.OneTick(0, 0, 0, 0);
+				//menu.HandleMouseMovement(p);
+				rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), true);
+				//MenuTick(p, &lastmovetime);
 			}
 			else
 			{
@@ -149,36 +158,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 	return 0;
 }
 
-bool MenuTick(POINT p, HWND windowhandle, int* lastMoveTime)
-{
-	/* Menu loop */
-	int button = menu.CheckMouseCollision(p);
-	keyboardinputmodeText = true;
-
-	if ((clock() - *lastMoveTime) >= 75 / GameSpeed)
-	{
-		game.OneTick(0, 0, 0, 0);
-		*lastMoveTime = clock();
-	}
-	rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), true);
-
-	Sleep(20);
-	return true;
-}
-
 void SingleplayerTick(POINT p, int* lastMoveTime)
 {
-	int button = menu.CheckMouseCollision(p);
-	if (button == 7 && GetAsyncKeyState(VK_LBUTTON) < 0)
-	{
-		snake1dir = LEFT;
-		snake2dir = LEFT;
-		tempDir1 = LEFT;
-		tempDir2 = LEFT;
-		menu.ChangePage(0);
-		inmenu = true;
-		keyboardinputmodeText = true;
-	}
 	/* Game loop */
 	if (GameSpeed > 0)
 	{
@@ -211,16 +192,6 @@ void SingleplayerTick(POINT p, int* lastMoveTime)
 void MultiplayerTick(POINT p)
 {
 	keyboardinputmodeText = false;
-	int button = menu.CheckMouseCollision(p);
-	if (button == 7 && GetAsyncKeyState(VK_LBUTTON) < 0)
-	{
-		menu.ChangePage(0);
-		net.Disconnect();
-		keyboardinputmodeText = true;
-		inmenu = true;
-		rend.RenderFrame(game.physics, menu.GetButtonsVectorForRenderer(), false);
-		Sleep(200);
-	}
 	if (tempDir1 > 0 && tempDir1 < 5)
 	{
 		snake1dir = tempDir1;
@@ -279,6 +250,85 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		return 0;
+		break;
+	case WM_KEYDOWN:
+		if (keyboardinputmodeText)
+		{
+			/*           English alphabet                          Numbers 0-9            */
+			if ((wParam >= 0x41 && wParam <= 0x5a) || (wParam >= 0x30 && wParam <= 0x39))
+			{
+				inputString.push_back((wchar_t)wParam);
+			}
+
+			/* Num pad numbers 0-9 */
+			if (wParam >= 0x60 && wParam <= 0x69)
+			{
+				inputString.push_back((wchar_t)(wParam - 0x30));
+			}
+
+			/* Backspace */
+			if (wParam == 0x08)
+			{
+				if (inputString.length() > 0)
+				{
+					inputString.pop_back();
+				}
+			}
+			if (wParam == VK_OEM_PERIOD)
+			{
+				inputString.push_back(L'.');
+			}
+			if (wParam == VK_SPACE)
+			{
+				inputString.push_back(L' ');
+			}
+		}
+		else
+		{
+			switch (wParam)
+			{
+			case 0x57:
+				tempDir1 = UP;
+				break;
+			case 0x53:
+				tempDir1 = DOWN;
+				break;
+			case 0x41:
+				tempDir1 = LEFT;
+				break;
+			case 0x44:
+				tempDir1 = RIGHT;
+				break;
+			case VK_UP:
+				tempDir2 = UP;
+				break;
+			case VK_DOWN:
+				tempDir2 = DOWN;
+				break;
+			case VK_LEFT:
+				tempDir2 = LEFT;
+				break;
+			case VK_RIGHT:
+				tempDir2 = RIGHT;
+				break;
+			}
+		}
+		break;/*
+	case WM_LBUTTONDOWN:
+		MOUSEHOOKSTRUCT * mouseInfo;
+		mouseInfo = (MOUSEHOOKSTRUCT*)lParam;
+		ScreenToClient(mouseInfo->hwnd, &mouseInfo->pt);
+		menu.HandleMouseClick(mouseInfo->pt);
+		break;*/
+	case WM_MOUSEMOVE:
+		POINT mouse;
+		mouse.x = GET_X_LPARAM(lParam);
+		mouse.y = GET_Y_LPARAM(lParam);
+		menu.HandleMouseMovement(mouse);
+		if (wParam == MK_LBUTTON)
+		{
+			menu.HandleMouseClick(mouse);
+		}
 		break;
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -347,5 +397,83 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
 			}
 		}
 	}
-	return CallNextHookEx(hhook, nCode, wParam, lParam);
+	//return CallNextHookEx(keyboardHook, nCode, wParam, lParam);
+}
+
+LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
+{
+	if (lParam == WM_KEYDOWN)
+	{
+		if (keyboardinputmodeText)
+		{
+			/*           English alphabet                          Numbers 0-9            */
+			if ((wParam >= 0x41 && wParam <= 0x5a) || (wParam >= 0x30 && wParam <= 0x39))
+			{
+				inputString.push_back((wchar_t)wParam);
+			}
+
+			/* Num pad numbers 0-9 */
+			if (wParam >= 0x60 && wParam <= 0x69)
+			{
+				inputString.push_back((wchar_t)(wParam - 0x30));
+			}
+
+			/* Backspace */
+			if (wParam == 0x08)
+			{
+				if (inputString.length() > 0)
+				{
+					inputString.pop_back();
+				}
+			}
+			if (wParam == VK_OEM_PERIOD)
+			{
+				inputString.push_back(L'.');
+			}
+			if (wParam == VK_SPACE)
+			{
+				inputString.push_back(L' ');
+			}
+		}
+		else
+		{
+			switch (wParam)
+			{
+			case 0x57:
+				tempDir1 = UP;
+				break;
+			case 0x53:
+				tempDir1 = DOWN;
+				break;
+			case 0x41:
+				tempDir1 = LEFT;
+				break;
+			case 0x44:
+				tempDir1 = RIGHT;
+				break;
+			case VK_UP:
+				tempDir2 = UP;
+				break;
+			case VK_DOWN:
+				tempDir2 = DOWN;
+				break;
+			case VK_LEFT:
+				tempDir2 = LEFT;
+				break;
+			case VK_RIGHT:
+				tempDir2 = RIGHT;
+				break;
+			}
+		}
+	}
+	return CallNextHookEx(keyboardHook, nCode, wParam, lParam);
+}
+
+LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam)
+{
+	MOUSEHOOKSTRUCT* mouseInfo;
+	mouseInfo = (MOUSEHOOKSTRUCT*)lParam;
+	ScreenToClient(mouseInfo->hwnd, &mouseInfo->pt);
+	menu.HandleMouseClick(mouseInfo->pt);
+	return CallNextHookEx(mouseHook, nCode, wParam, lParam);
 }

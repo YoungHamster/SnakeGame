@@ -80,7 +80,7 @@ int Page::CheckMouseCollisions(POINT mouse)
 	}
 	if (CollidedButton != -1)
 	{
-		return buttons[CollidedButton].UBID;
+		return CollidedButton;
 	}
 	return -1;
 }

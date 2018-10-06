@@ -32,8 +32,11 @@ void Menu::FillTransitions()
 		FillTransition(GameOver,                  GoBack,                MainMenu,                  NULL,                  20);
 	}
 
-void Menu::Init(Renderer* rend)
+void Menu::Init(Renderer* rend, double* gameSpeed, std::wstring* inputString)
 {
+	this->gameSpeed = gameSpeed;
+	this->inputString = inputString;
+
 	FillTransitions();
 	pages[MainMenu].AddButton(                 true, true, 0, 80,  const_cast<wchar_t*>(L"START"),          10, rend, Start,              0);
 	pages[MainMenu].AddButton(                 true, true, 0, 290, const_cast<wchar_t*>(L"MULTIPLAYER"),    10, rend, GoToMultiplayer,    0);
@@ -54,44 +57,44 @@ void Menu::Init(Renderer* rend)
 
 
 
-	AddButton(1, false, true, 0, 80, const_cast <wchar_t*>(L"MULTIPLAYER"), 10, rend, -1);
-	//AddButton(1, false, true, 640, 320, const_cast <wchar_t*>(L"COMING"), 6, rend, 5);
-	AddButton(1, true, true, 0, 360, const_cast <wchar_t*>(L"NEW SERVER"), 6, rend, 18);
-	//AddButton(1, false, true, 640, 400, const_cast <wchar_t*>(L"SOON"), 6, rend, 6);
-	AddButton(1, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
+	//AddButton(1, false, true, 0, 80, const_cast <wchar_t*>(L"MULTIPLAYER"), 10, rend, -1);
+	////AddButton(1, false, true, 640, 320, const_cast <wchar_t*>(L"COMING"), 6, rend, 5);
+	//AddButton(1, true, true, 0, 360, const_cast <wchar_t*>(L"NEW SERVER"), 6, rend, 18);
+	////AddButton(1, false, true, 640, 400, const_cast <wchar_t*>(L"SOON"), 6, rend, 6);
+	//AddButton(1, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
 
-	AddButton(2, false, true, 0, 40, const_cast <wchar_t*>(L"OPTIONS"), 10, rend, -1);
+	//AddButton(2, false, true, 0, 40, const_cast <wchar_t*>(L"OPTIONS"), 10, rend, -1);
 
-	AddButton(2, true, true, 0, 300, const_cast <wchar_t*>(L"+"), 4, rend, 9);
-	AddButton(2, false, true, 0, 360, const_cast <wchar_t*>(L"SPEED - 1.0"), 6, rend, -1);
-	AddButton(2, true, true, 0, 420, const_cast <wchar_t*>(L"-"), 4, rend, 11);
+	//AddButton(2, true, true, 0, 300, const_cast <wchar_t*>(L"+"), 4, rend, 9);
+	//AddButton(2, false, true, 0, 360, const_cast <wchar_t*>(L"SPEED - 1.0"), 6, rend, -1);
+	//AddButton(2, true, true, 0, 420, const_cast <wchar_t*>(L"-"), 4, rend, 11);
 
-	AddButton(2, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
+	//AddButton(2, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
 
-	AddButton(3, true, true, 0, 5, const_cast <wchar_t*>(L"BACK TO MAIN MENU"), 4, rend, 7);
-	AddButton(3, false, true, 0, 45, const_cast <wchar_t*>(L"1ST BLUE"), 3, rend, -1);
-	AddButton(3, false, true, 0, 75, const_cast <wchar_t*>(L"2ND GREEN"), 3, rend, -1);
-	AddButton(3, false, true, 0, 105, const_cast <wchar_t*>(L"3RD YELLOW"), 3, rend, -1);
-	AddButton(3, false, true, 0, 135, const_cast <wchar_t*>(L"4TH VIOLET"), 3, rend, -1);
+	//AddButton(3, true, true, 0, 5, const_cast <wchar_t*>(L"BACK TO MAIN MENU"), 4, rend, 7);
+	//AddButton(3, false, true, 0, 45, const_cast <wchar_t*>(L"1ST BLUE"), 3, rend, -1);
+	//AddButton(3, false, true, 0, 75, const_cast <wchar_t*>(L"2ND GREEN"), 3, rend, -1);
+	//AddButton(3, false, true, 0, 105, const_cast <wchar_t*>(L"3RD YELLOW"), 3, rend, -1);
+	//AddButton(3, false, true, 0, 135, const_cast <wchar_t*>(L"4TH VIOLET"), 3, rend, -1);
 
-	AddButton(4, true, true, 0, 5, const_cast <wchar_t*>(L"BACK TO MAIN MENU"), 4, rend, 7);
-	AddButton(4, false, true, 0, 50, const_cast <wchar_t*>(L"UUID - UNKNOWN"), 4, rend, -1);
-	AddButton(4, false, true, 0, 100, const_cast <wchar_t*>(L"URID - UNKNOWN"), 4, rend, -1);
-	AddButton(4, true, true, 0, 150, const_cast <wchar_t*>(L"VOTE FOR START"), 5, rend, 20);
+	//AddButton(4, true, true, 0, 5, const_cast <wchar_t*>(L"BACK TO MAIN MENU"), 4, rend, 7);
+	//AddButton(4, false, true, 0, 50, const_cast <wchar_t*>(L"UUID - UNKNOWN"), 4, rend, -1);
+	//AddButton(4, false, true, 0, 100, const_cast <wchar_t*>(L"URID - UNKNOWN"), 4, rend, -1);
+	//AddButton(4, true, true, 0, 150, const_cast <wchar_t*>(L"VOTE FOR START"), 5, rend, 20);
 
-	AddButton(5, true, true, 0, 275, const_cast <wchar_t*>(L"1 PLAYER"), 4, rend, 12);
-	AddButton(5, true, true, 0, 325, const_cast <wchar_t*>(L"2 PLAYERS"), 4, rend, 13);
-	AddButton(5, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
+	//AddButton(5, true, true, 0, 275, const_cast <wchar_t*>(L"1 PLAYER"), 4, rend, 12);
+	//AddButton(5, true, true, 0, 325, const_cast <wchar_t*>(L"2 PLAYERS"), 4, rend, 13);
+	//AddButton(5, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
 
-	AddButton(6, true, true, 0, 50, const_cast <wchar_t*>(L"CONNECT"), 4, rend, 19);
-	AddButton(6, false, true, 0, 215, const_cast <wchar_t*>(L"IP"), 4, rend, 7);
-	AddButton(6, false, true, 0, 250, const_cast <wchar_t*>(L""), 4, rend, 7);
-	AddButton(6, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
+	//AddButton(6, true, true, 0, 50, const_cast <wchar_t*>(L"CONNECT"), 4, rend, 19);
+	//AddButton(6, false, true, 0, 215, const_cast <wchar_t*>(L"IP"), 4, rend, 7);
+	//AddButton(6, false, true, 0, 250, const_cast <wchar_t*>(L""), 4, rend, 7);
+	//AddButton(6, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
 
-	AddButton(7, true, true, 0, 50, const_cast <wchar_t*>(L"NEW ROOM"), 4, rend, 2147483647);
-	/*AddButton(7, true, true, 0, 200, const_cast <wchar_t*>(L"IP"), 4, rend, 7);
-	AddButton(7, true, true, 0, 250, const_cast <wchar_t*>(L""), 4, rend, 7);*/
-	AddButton(7, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
+	//AddButton(7, true, true, 0, 50, const_cast <wchar_t*>(L"NEW ROOM"), 4, rend, 2147483647);
+	///*AddButton(7, true, true, 0, 200, const_cast <wchar_t*>(L"IP"), 4, rend, 7);
+	//AddButton(7, true, true, 0, 250, const_cast <wchar_t*>(L""), 4, rend, 7);*/
+	//AddButton(7, true, true, 0, 600, const_cast <wchar_t*>(L"BACK"), 8, rend, 7);
 	/*AddButton(4, false, true, 0, 45, const_cast <wchar_t*>(L"1ST BLUE"), 3, rend, -1);
 	AddButton(4, false, true, 0, 75, const_cast <wchar_t*>(L"2ND GREEN"), 3, rend, -1);
 	AddButton(4, false, true, 0, 105, const_cast <wchar_t*>(L"3RD YELLOW"), 3, rend, -1);
@@ -116,7 +119,7 @@ void Menu::Init(Renderer* rend)
 
 std::vector<button>& Menu::GetButtonsVectorForRenderer()
 {
-	return pages[CurrentPageID].buttons;
+	return pages[CurrentState].buttons;
 }
 
 void Menu::ChangeButtonText(int PageID, int ButtonID, wchar_t* Text)
@@ -128,13 +131,35 @@ void Menu::ChangeButtonText(int PageID, int ButtonID, wchar_t* Text)
 	pages[PageID].buttons[ButtonID].Text = Text;
 }
 
-int Menu::CheckMouseCollision(POINT mouse)
+MenuStates Menu::HandleMouseClick(POINT mouse)
 {
-	return pages[CurrentPageID].CheckMouseCollisions(mouse);
+	out.Write("HandledMouseClick");
+	int buttonid = pages[CurrentState].CheckMouseCollisions(mouse);
+	const char* AdditionalInfoc = NULL;
+	double* AdditionalInfod = NULL;
+	int AdditionalInfoi = 0;
+	if (pages[CurrentState].buttons[buttonid].UBID == TryConnectToServer)
+	{
+		std::string ip(inputString->begin(), inputString->end());
+		AdditionalInfoc = ip.c_str()/* pointer to string with server ip */;
+	}
+	if (pages[CurrentState].buttons[buttonid].UBID == ChooseRoom)
+	{
+		AdditionalInfoi = pages[CurrentState].buttons[buttonid].AdditionalInfo;
+	}
+	if (pages[CurrentState].buttons[buttonid].UBID == IncreaseGameSpeed || pages[CurrentState].buttons[buttonid].UBID == DecreaseGameSpeed)
+	{
+		AdditionalInfod = gameSpeed/* pointer to GameSpeed*/;
+	}
+	if (pages[CurrentState].buttons[buttonid].UBID >= 0 && pages[CurrentState].buttons[buttonid].UBID <= 13)
+	{
+		RegisterEvent((MenuEvents)pages[CurrentState].buttons[buttonid].UBID, AdditionalInfoi, AdditionalInfod, AdditionalInfoc);
+	}
+	return CurrentState;
 }
-
-void Menu::RegisterEvent(MenuEvents Event, int AdditionalInfoi, double* AdditionalInfod, char* AdditionalInfoc)
+void Menu::RegisterEvent(MenuEvents Event, int AdditionalInfoi, double* AdditionalInfod, const char* AdditionalInfoc)
 {
+	out.Write("Registered event\n");
 	MenuEvent NewEvent;
 	NewEvent.Event = Event;
 	NewEvent.AdditionalInfoi = AdditionalInfoi;
@@ -156,4 +181,23 @@ void Menu::HandleEvent(MenuEvent Event)
 			}
 		}
 	}
+}
+
+void Menu::FillTransition(MenuStates CurrentState, MenuEvents ExpectedEvent, MenuStates TargetState, void(*method)(Menu* menu, MenuEvent Params), int transIdInArray)
+{
+	transitions[transIdInArray].CurrentState = CurrentState;
+	transitions[transIdInArray].Event = ExpectedEvent;
+	transitions[transIdInArray].TargetState = TargetState;
+	transitions[transIdInArray].method = method;
+}
+
+void Menu::NetworkAddRoomsButtonsWhenConnectingToServer(int NumberOfRooms, int* Rooms)
+{
+	return;
+}
+
+void Menu::HandleMouseMovement(POINT p)
+{
+	out.Write("HandledMouseMovement\n");
+	pages[CurrentState].CheckMouseCollisions(p);
 }

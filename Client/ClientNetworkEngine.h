@@ -9,7 +9,6 @@
 #pragma comment(lib, "Ws2_32.lib")
 
 #include "Physics.h"
-#include "Menu.h"
 #include "GameLogic.h"
 #include "Console.h"
 
@@ -87,7 +86,7 @@ private:
 	bool SynchronizeGame();
 	NetStates GameTick(NetEngineInput input);
 public:
-	int* ConnectPart1(const char* ip, unsigned short port, Menu *menu, int* numberOfRooms);
+	int* ConnectPart1(const char* ip, unsigned short port, int* numberOfRooms);
 	bool ConnectPart2(int playerChoose);
 	bool VoteForStart();
 	std::vector<PhysicalObject>* SendDirGetPhysics(char dir);
