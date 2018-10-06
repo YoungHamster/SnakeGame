@@ -14,7 +14,8 @@ enum MenuStates
 	Options,
 	Game,
 	GameOver,
-	ExitGame
+	ExitGame,
+	MultiplayerGame
 };
 
 enum MenuEvents
@@ -59,12 +60,12 @@ class Menu
 private:
 	//std::vector<Page> pages;
 	/* Hardcoded number of pages and transitions for performance */
-	Page pages[10];
-	Transition transitions[21];
+	Page pages[11];
+	Transition transitions[22];
 	MenuStates CurrentState;
-	int NumberOfTransitions = 21;
+	int NumberOfTransitions = 22;
 
-	double* gameSpeed;
+	double* gSpeed;
 	std::wstring* inputString;
 
 	Console out;
@@ -81,6 +82,7 @@ public:
 	void HandleMouseMovement(POINT p);
 	void NetworkAddRoomsButtonsWhenConnectingToServer(int NumberOfRooms, int* Rooms);
 	void RegisterEvent(MenuEvents Event, int AdditionalInfoi, double* AdditionalInfod, const char* AdditionalInfoc);
+	const MenuStates GetMenuState() { return CurrentState; }
 };
 
 inline void FuncConnectToServer(Menu* menu, MenuEvent Event)
@@ -112,9 +114,16 @@ inline void FuncVoteForStart(Menu* menu, MenuEvent Event)
 inline void FuncIncreaseGameSpeed(Menu* menu, MenuEvent Event)
 {
 	*Event.AdditionalInfod += 0.02;
+	menu->ChangeButtonText(Options, 1, const_cast<wchar_t*>(std::to_wstring(*Event.AdditionalInfod).c_str()));
 }
 
 inline void FuncDecreaseGameSpeed(Menu* menu, MenuEvent Event)
 {
 	*Event.AdditionalInfod -= 0.02;
+	menu->ChangeButtonText(Options, 1, const_cast<wchar_t*>(std::to_wstring(*Event.AdditionalInfod).c_str()));
+}
+
+inline void FuncWaitBetweenTransitions(Menu* menu, MenuEvent Event)
+{
+	//Sleep(50);
 }
