@@ -2,6 +2,7 @@
 
 int* ClientNetworkEngine::ConnectPart1(const char* ip, unsigned short port, int* numberOfRooms)
 {
+	out.Write(ip);
 	ConnectionState = HANDSHAKING;
 	game.Init(64, 36, 5, 5, 5, 5);
 	int succ;
@@ -17,7 +18,6 @@ int* ClientNetworkEngine::ConnectPart1(const char* ip, unsigned short port, int*
 	if (sock == INVALID_SOCKET)
 	{
 		out.Write("connect() error\n");
-		std::cout << "connect() error" << std::endl;
 		ConnectionState = DISCONNECTED;
 		return NULL;
 	}
@@ -25,14 +25,14 @@ int* ClientNetworkEngine::ConnectPart1(const char* ip, unsigned short port, int*
 	buff[0] = '\x01';
 	buff[1] = '\x00';
 	buff[2] = '\x43';
-	send(sock, buff, 3, NULL);
+	//send(sock, buff, 3, NULL);
+	out.Write("Sended 1st packet to server! " + std::to_string(send(sock, buff, 3, NULL)) + " bytes." + "\n");
 
 	BytesToULL uuidconv;
 	BytesToInt roomIdconv;
 	int recvRes = recv(sock, buff, sizeof(buff), NULL);
 
-	out.Write("Received 1st packet from server! " + std::to_string(recvRes) + " bytes.");
-	std::cout << "Received 1st packet from server! " << recvRes << " bytes." << std::endl;
+	out.Write("Received 1st packet from server! " + std::to_string(recvRes) + " bytes." + "\n");
 
 	int roomsNumber = (recvRes - 9) / 4;
 	for (int i = 0; i < 8; i++)
@@ -41,7 +41,7 @@ int* ClientNetworkEngine::ConnectPart1(const char* ip, unsigned short port, int*
 	}
 	UUID = uuidconv.integer;
 
-	out.Write(std::to_string(UUID) + " - UUID");
+	out.Write(std::to_string(UUID) + " - UUID\n");
 
 	if (roomsNumber > 0)
 	{
@@ -103,7 +103,7 @@ bool ClientNetworkEngine::ConnectPart2(int playerChoose)
 
 NetStates ClientNetworkEngine::NetworkTick(NetEngineInput input)
 {
-	if (ConnectionState == MATCH_DESYNC)
+	if (ConnectionState == MATCH_DESYNC || ConnectionState == SOMEERROR)
 	{
 		if (SynchronizeGame())
 		{
@@ -150,7 +150,7 @@ NetStates ClientNetworkEngine::GameTick(NetEngineInput input)
 	if (input != TURN_UP && input != TURN_DOWN && input != TURN_LEFT && input != TURN_RIGHT)
 	{
 		ConnectionState = SOMEERROR;
-		out.Write("WRONG PARAMETERS TO GameTick() FUNCTION");
+		out.Write("WRONG PARAMETERS TO GameTick() FUNCTION\n");
 		return ConnectionState;
 	}
 	char dir = (char)input;
@@ -165,7 +165,7 @@ NetStates ClientNetworkEngine::GameTick(NetEngineInput input)
 	if (oneTickPacket[0] != '\x0f' || oneTickPacket[1] != '\x03')
 	{
 		ConnectionState = SOMEERROR;
-		out.Write("SERVER SENDED WRONG PACKET!!!");
+		out.Write("SERVER SENDED WRONG PACKET!!!\n");
 		return ConnectionState;
 	}
 	PhysicalObject apple;

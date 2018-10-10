@@ -20,7 +20,7 @@ struct SnakeNameForSortingByLenght
 GameLogic game;
 Renderer rend;
 Menu menu;
-ClientNetworkEngine net;
+ClientNetworkEngine networkEngine;
 
 bool inmenu = true;
 bool gamerunning = true;
@@ -42,7 +42,7 @@ int Snake1Length = 5;
 int Snake2Length = 5;
 int Snake3Length = 5;
 int Snake4Length = 5;
-static double GameSpeed = 1;
+static float GameSpeed = 1;
 short GameFieldWidth = GAMEFIELDWIDTH;
 short GameFieldHeight = GAMEFIELDHEIGTH;
 
@@ -102,7 +102,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 		}
 		return -2;
 	}
-	menu.Init(&rend, &GameSpeed, &inputString);
+	menu.Init(&rend, &GameSpeed, &inputString, &networkEngine);
 
 	/* Game timer */
 	int lastmovetime = 0;
@@ -221,7 +221,8 @@ void MultiplayerTick(POINT p)
 	{
 		snake1dir = tempDir1;
 	}
-	rend.RenderFrame(net.GetPhysicsForRenderer(), menu.GetButtonsVectorForRenderer(), false);
+	networkEngine.NetworkTick((NetEngineInput)snake1dir);
+	rend.RenderFrame(networkEngine.GetPhysicsForRenderer(), menu.GetButtonsVectorForRenderer(), false);
 	Sleep(50);
 }
 

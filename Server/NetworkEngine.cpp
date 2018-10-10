@@ -19,6 +19,16 @@ bool NetworkEngine::Init()
 	std::thread acceptingthr(AcceptingThread, listenSock, address, 1000, &rooms[0]);
 	acceptingthr.detach();
 	std::cout << "Server started!" << std::endl;
+
+	functions[0] = Handshake;
+	functions[1] = SendMainInformationAboutServer;
+	functions[2] = CreateNewRoom;
+	functions[3] = VoteForStart;
+	functions[4] = Ping;
+	functions[5] = SendOptimizedPhysics;
+	functions[6] = SendAllPhysics;
+	functions[7] = StopMatch;
+	functions[8] = Disconnect;
 	return true;
 }
 
@@ -48,141 +58,151 @@ void NetworkEngine::AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, int 
 	}
 }
 
-void NetworkEngine::Handshake(connection client, GameRoom *firstRoom)
+void NetworkEngine::AsyncUserConnection(GameRoom *firstRoom, connection connection)
 {
-	GameRoom *room = firstRoom;
-	int nicknamelenght = 0;
-	char buff[1500];
-	ZeroBuff(&buff[0], 1500);
-
-	recv(client.connectSock, buff, sizeof(buff), NULL);
-	if (buff[0] != '\x01')
+	char buff[1024 * 20];
+	while (serverrunning && connection.connected)
 	{
-		std::cout << "Error while handshaking with player" << std::endl;
-		closesocket(client.connectSock);
-		client.connected = false;
-		return;
+		recv(connection.connectSock, buff, sizeof(buff), NULL);
+		functions[buff[0]](buff, sizeof(buff), firstRoom, &connection);
 	}
-	for (int i = 0; i < sizeof(buff); i++)
-	{
-		if (buff[i + 1] == '\0') continue;
-		nicknamelenght++;
-	}
-	wchar_t* nickname = new wchar_t[nicknamelenght / 2];
-	for (int i = 0; i < nicknamelenght / 2; i++)
-	{
-		/*nickname[i] = 0;
-		nickname[i] |= buff[i + 1];
-		nickname[i] <<= 8;
-		nickname[i] |= buff[i + 2];*/
-		WcharToBytes nicknameConv;
-		nicknameConv.bytes[0] = buff[i + 1];
-		nicknameConv.bytes[1] = buff[i + 2];
-		nickname[i] = nicknameConv.wchar;
-	}
-
-	/* Respone */
-	int bufflenght = 9;
-	client.nickname = nickname;
-	client.uuid |= randNum();
-	client.uuid <<= 32;
-	client.uuid |= randNum();
-	buff[0] = '\x01';
-	ULLToBytes uuidConv;
-	uuidConv.integer = client.uuid;
-	for (int i = 0; i < 8; i++)
-	{
-		
-		buff[i + 1] = uuidConv.bytes[i];
-	}
-	if (AnyActiveRooms(firstRoom))
-	{
-		buff[9] = '\x02';
-		room = firstRoom;
-		for (int i = 0; i < 250; i++, room++)
-		{
-			if (room->roomActive)
-			{
-				IntToBytes URIDconv;
-				URIDconv.integer = room->URID;
-				buff[10 + i * sizeof(int)] = URIDconv.bytes[0];
-				buff[11 + i * sizeof(int)] = URIDconv.bytes[1];
-				buff[12 + i * sizeof(int)] = URIDconv.bytes[2];
-				buff[13 + i * sizeof(int)] = URIDconv.bytes[3];
-				buff[14 + i * sizeof(int)] = '\0';
-				bufflenght = 14 + i * sizeof(int);
-			}
-		}
-	}
-	else
-	{
-		buff[9] = '\0';
-	}
-	send(client.connectSock, buff, bufflenght, NULL);
-	
-	/* Get */
-	ZeroBuff(&buff[0], 1500);
-	recv(client.connectSock, buff, sizeof(buff), NULL);
-	if (buff[0] != '\x02')
-	{
-		closesocket(client.connectSock);
-		client.connected = false;
-		return;
-	}
-	if (buff[1] == '\x01')
-	{
-		GameRoom newroom;
-		newroom.Init(client);
-		std::cout << "Recently connected client data: nickname - " << client.nickname << " uuid - " << client.uuid << " room id - " << newroom.URID << std::endl;
-		room = NewRoom(newroom, firstRoom);
-		buff[0] = '\x03';
-		IntToBytes i2b;
-		i2b.integer = room->URID;
-		buff[1] = i2b.bytes[0];
-		buff[2] = i2b.bytes[1];
-		buff[3] = i2b.bytes[2];
-		buff[4] = i2b.bytes[3];
-		buff[5] = '\0';
-		send(client.connectSock, buff, 6, NULL);
-		std::thread NewRoom(AsyncRoomThr, room);
-		NewRoom.detach();
-		/* Instead of creating new thread i call this function in this thread */
-		/*std::thread newPlayer(AsyncUserConnectionThr, room, &room->players[0]);
-		newPlayer.detach();*/
-		AsyncUserConnectionThr(room, &room->players[0]);
-		return;
-	}
-	if (buff[1] == '\x02')
-	{
-		IntToBytes i2b;
-		i2b.bytes[0] = buff[2];
-		i2b.bytes[1] = buff[3];
-		i2b.bytes[2] = buff[4];
-		i2b.bytes[3] = buff[5];
-		//BytesToInt(&buff[2], &urid);
-		room = firstRoom;
-		for (int i = 0; i < 1000; i++, room++)
-		{
-			if (room->URID == i2b.integer)
-			{
-				buff[0] = '\x03';
-				buff[5] = '\0';
-				int newclientid = room->ConnectPlayer(client);
-				send(client.connectSock, buff, 6, NULL);
-				std::cout << L"Recently connected client data: nickname - " << client.nickname << L" uuid - " << client.uuid << " room id - " << room->URID << std::endl;
-
-				/* Instead of creating new thread i call this function in this thread */
-				/*std::thread newPlayer(AsyncUserConnectionThr, room, &room->players[newclientid]);
-				newPlayer.detach();*/
-				AsyncUserConnectionThr(room, &room->players[newclientid]);
-				return;
-			}
-		}
-	}
-	std::cout << "Error while handshaking with player\n";
-	client.connected = false;
-	closesocket(client.connectSock);
 }
+
+//void NetworkEngine::Handshake(connection client, GameRoom *firstRoom)
+//{
+//	GameRoom *room = firstRoom;
+//	int nicknamelenght = 0;
+//	char buff[1500];
+//	ZeroBuff(&buff[0], 1500);
+//
+//	recv(client.connectSock, buff, sizeof(buff), NULL);
+//	if (buff[0] != '\x01')
+//	{
+//		std::cout << "Error while handshaking with player" << std::endl;
+//		closesocket(client.connectSock);
+//		client.connected = false;
+//		return;
+//	}
+//	for (int i = 0; i < sizeof(buff) - 1; i++)
+//	{
+//		if (buff[i + 1] == '\0') continue;
+//		nicknamelenght++;
+//	}
+//	wchar_t* nickname = new wchar_t[nicknamelenght / 2];
+//	for (int i = 0; i < nicknamelenght / 2; i++)
+//	{
+//		/*nickname[i] = 0;
+//		nickname[i] |= buff[i + 1];
+//		nickname[i] <<= 8;
+//		nickname[i] |= buff[i + 2];*/
+//		WcharToBytes nicknameConv;
+//		nicknameConv.bytes[0] = buff[i + 1];
+//		nicknameConv.bytes[1] = buff[i + 2];
+//		nickname[i] = nicknameConv.wchar;
+//	}
+//
+//	/* Respone */
+//	int bufflenght = 9;
+//	client.nickname = nickname;
+//	client.uuid |= randNum();
+//	client.uuid <<= 32;
+//	client.uuid |= randNum();
+//	buff[0] = '\x01';
+//	ULLToBytes uuidConv;
+//	uuidConv.integer = client.uuid;
+//	for (int i = 0; i < 8; i++)
+//	{
+//		
+//		buff[i + 1] = uuidConv.bytes[i];
+//	}
+//	if (AnyActiveRooms(firstRoom))
+//	{
+//		buff[9] = '\x02';
+//		room = firstRoom;
+//		for (int i = 0; i < 250; i++, room++)
+//		{
+//			if (room->roomActive)
+//			{
+//				IntToBytes URIDconv;
+//				URIDconv.integer = room->URID;
+//				buff[10 + i * sizeof(int)] = URIDconv.bytes[0];
+//				buff[11 + i * sizeof(int)] = URIDconv.bytes[1];
+//				buff[12 + i * sizeof(int)] = URIDconv.bytes[2];
+//				buff[13 + i * sizeof(int)] = URIDconv.bytes[3];
+//				buff[14 + i * sizeof(int)] = '\0';
+//				bufflenght = 14 + i * sizeof(int);
+//			}
+//		}
+//	}
+//	else
+//	{
+//		buff[9] = '\0';
+//	}
+//	send(client.connectSock, buff, bufflenght, NULL);
+//	
+//	/* Get */
+//	ZeroBuff(&buff[0], 1500);
+//	recv(client.connectSock, buff, sizeof(buff), NULL);
+//	if (buff[0] != '\x02')
+//	{
+//		closesocket(client.connectSock);
+//		client.connected = false;
+//		return;
+//	}
+//	if (buff[1] == '\x01')
+//	{
+//		GameRoom newroom;
+//		newroom.Init(client);
+//		std::cout << "Recently connected client data: nickname - " << client.nickname << " uuid - " << client.uuid << " room id - " << newroom.URID << std::endl;
+//		room = NewRoom(newroom, firstRoom);
+//		buff[0] = '\x03';
+//		IntToBytes i2b;
+//		i2b.integer = room->URID;
+//		buff[1] = i2b.bytes[0];
+//		buff[2] = i2b.bytes[1];
+//		buff[3] = i2b.bytes[2];
+//		buff[4] = i2b.bytes[3];
+//		buff[5] = '\0';
+//		send(client.connectSock, buff, 6, NULL);
+//		std::thread NewRoom(AsyncRoomThr, room);
+//		NewRoom.detach();
+//		/* Instead of creating new thread i call this function in this thread */
+//		/*std::thread newPlayer(AsyncUserConnectionThr, room, &room->players[0]);
+//		newPlayer.detach();*/
+//		AsyncUserConnectionThr(room, &room->players[0]);
+//		return;
+//	}
+//	if (buff[1] == '\x02')
+//	{
+//		IntToBytes i2b;
+//		i2b.bytes[0] = buff[2];
+//		i2b.bytes[1] = buff[3];
+//		i2b.bytes[2] = buff[4];
+//		i2b.bytes[3] = buff[5];
+//		//BytesToInt(&buff[2], &urid);
+//		room = firstRoom;
+//		for (int i = 0; i < 1000; i++, room++)
+//		{
+//			if (room->URID == i2b.integer)
+//			{
+//				buff[0] = '\x03';
+//				buff[5] = '\0';
+//				int newclientid = room->ConnectPlayer(client);
+//				send(client.connectSock, buff, 6, NULL);
+//				std::cout << L"Recently connected client data: nickname - " << client.nickname << L" uuid - " << client.uuid << " room id - " << room->URID << std::endl;
+//
+//				/* Instead of creating new thread i call this function in this thread */
+//				/*std::thread newPlayer(AsyncUserConnectionThr, room, &room->players[newclientid]);
+//				newPlayer.detach();*/
+//				AsyncUserConnectionThr(room, &room->players[newclientid]);
+//				return;
+//			}
+//		}
+//	}
+//	std::cout << "Error while handshaking with player\n";
+//	client.connected = false;
+//	closesocket(client.connectSock);
+//}
 
 GameRoom* NetworkEngine::NewRoom(GameRoom newroom, GameRoom* firstRoom)
 {
@@ -195,17 +215,6 @@ GameRoom* NetworkEngine::NewRoom(GameRoom newroom, GameRoom* firstRoom)
 		}
 		firstRoom++;
 	}
-}
-
-bool NetworkEngine::AnyActiveRooms(GameRoom *firstRoom)
-{
-	for (int i = 0; i < 1000; i++)
-	{
-		if (firstRoom->roomActive) return true;
-		/* I surprisingly found that when i add number to pointer i add sizeof(pointer type)*number */
-		firstRoom++;
-	}
-	return false;
 }
 
 void NetworkEngine::AsyncRoomThr(GameRoom *room)
@@ -228,12 +237,25 @@ void NetworkEngine::AsyncRoomThr(GameRoom *room)
 
 void NetworkEngine::AsyncUserConnectionThr(GameRoom *room, connection *player)
 {
-	char buff[1024*1024];
+	char buff[1024*10];
 	ZeroBuff(&buff[0], sizeof(buff));
-	while (serverrunning && player->connected && room->roomActive)
+	while (serverrunning && player->connected)
 	{
 		Sleep(3);
 		recv(player->connectSock, buff, sizeof(buff), NULL);
+		switch (buff[0])
+		{
+		case 0x02:
+			break;
+		case 0x0a:
+			break;
+		case 0x04:
+			break;
+		case 0x07:
+			break;
+		case 0xff:
+			break;
+		}
 		if (buff[0] == '\x0a')
 		{
 			DoubleToBytes conv;
@@ -512,7 +534,26 @@ const char* NetworkEngine::WSAErrorToString()
 	return "no error occured.";
 }
 
-unsigned int NetworkEngine::randNum()
+void NetworkEngine::ZeroBuff(char *firstByte, int sizeOfBuff)
+{
+	for (int i = 0; i < sizeOfBuff; i++, firstByte++)
+	{
+		*firstByte = '\0';
+	}
+}
+
+bool AnyActiveRooms(GameRoom *firstRoom)
+{
+	for (int i = 0; i < 1000; i++)
+	{
+		if (firstRoom->roomActive) return true;
+		/* I surprisingly found that when i add number to pointer i add sizeof(pointer type)*number */
+		firstRoom++;
+	}
+	return false;
+}
+
+unsigned int randNum()
 {
 	std::random_device rd;
 	std::mt19937 gen(rd());
@@ -520,10 +561,129 @@ unsigned int NetworkEngine::randNum()
 	return gen();
 }
 
-void NetworkEngine::ZeroBuff(char *firstByte, int sizeOfBuff)
+int Handshake(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
 {
-	for (int i = 0; i < sizeOfBuff; i++, firstByte++)
+	GameRoom *room = firstRoom;
+	int nicknamelenght = 0;
+	char buff[1500];
+	//ZeroBuff(&buff[0], 1500);
+	for (int i = 0; i < sizeof(buff); i++)
 	{
-		*firstByte = '\0';
+		buff[i] = '\0';
 	}
+
+	recv(player->connectSock, buff, sizeof(buff), NULL);
+	if (buff[0] != '\x01')
+	{
+		std::cout << "Error while handshaking with player, player sended wrong packet!" << std::endl;
+		closesocket(player->connectSock);
+		player->connected = false;
+		return -1;
+	}
+	for (int i = 0; i < sizeof(buff) - 1; i++)
+	{
+		if (buff[i + 1] == '\0') continue;
+		nicknamelenght++;
+	}
+	wchar_t* nickname = new wchar_t[nicknamelenght / 2];
+	for (int i = 0; i < nicknamelenght / 2; i++)
+	{
+		WcharToBytes nicknameConv;
+		nicknameConv.bytes[0] = buff[i + 1];
+		nicknameConv.bytes[1] = buff[i + 2];
+		nickname[i] = nicknameConv.wchar;
+	}
+
+	/* Respone */
+	int bufflenght = 9;
+	player->nickname = nickname;
+	player->uuid |= randNum();
+	player->uuid <<= 32;
+	player->uuid |= randNum();
+	
+	/* Write information about user in console */
+	std::cout << "New player: UUID-" << player->uuid << " , nikcname-" << player->nickname << std::endl;
+
+	buff[0] = '\x01';
+	ULLToBytes uuidConv;
+	uuidConv.integer = player->uuid;
+	for (int i = 0; i < 8; i++)
+	{
+
+		buff[i + 1] = uuidConv.bytes[i];
+	}
+	if (AnyActiveRooms(firstRoom))
+	{
+		buff[9] = '\x02';
+		room = firstRoom;
+		for (int i = 0; i < 250; i++, room++)
+		{
+			if (room->roomActive)
+			{
+				IntToBytes URIDconv;
+				URIDconv.integer = room->URID;
+				buff[10 + i * sizeof(int)] = URIDconv.bytes[0];
+				buff[11 + i * sizeof(int)] = URIDconv.bytes[1];
+				buff[12 + i * sizeof(int)] = URIDconv.bytes[2];
+				buff[13 + i * sizeof(int)] = URIDconv.bytes[3];
+				buff[14 + i * sizeof(int)] = '\0';
+				bufflenght = 14 + i * sizeof(int);
+			}
+		}
+	}
+	else
+	{
+		buff[9] = '\0';
+	}
+	send(player->connectSock, buff, bufflenght, NULL);
+}
+
+int SendMainInformationAboutServer(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
+{
+
+}
+
+int CreateNewRoom(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
+{
+
+}
+
+int VoteForStart(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
+{
+
+}
+
+
+/* Player sends 512bytes to server and server immidiatly respones with 512bytes and counts how many time it took then we count speed of connection and ping */
+int Ping(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
+{
+	char buff[512];
+	auto time = std::chrono::high_resolution_clock::now();
+	recv(player->connectSock, buff, sizeof(buff), NULL);
+	send(player->connectSock, buff, sizeof(buff), NULL);
+	auto secondTime = std::chrono::high_resolution_clock::now();
+	long long delta = std::chrono::duration_cast<std::chrono::nanoseconds>(secondTime - time).count();
+	long long ping = delta;
+	double kbpersec = 1000 * 1000 * 1000 / delta;
+	std::cout << "Statistics of player with uuid-" << player->uuid << ": speed=" << kbpersec << " kb/sec, ping = " << ping / 1000000 << "ms, or " << ping << "ns" << std::endl;
+}
+
+int SendOptimizedPhysics(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
+{
+
+}
+
+int SendAllPhysics(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
+{
+
+}
+
+int StopMatch(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
+{
+
+}
+
+int Disconnect(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
+{
+
 }

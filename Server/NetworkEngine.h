@@ -6,6 +6,7 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <chrono>
 #pragma comment(lib, "Ws2_32.lib")
 
 #include "GameRoom.h"
@@ -63,17 +64,22 @@ private:
 	SOCKADDR_IN address;
 	SOCKET listenSock;
 	//connection connections[1000];
-	GameRoom rooms[1000];
+	static GameRoom rooms[1000];
+	static connection players[10000];
+
+	/* static array of pointers on functions for network final state machine */
+	static int(*functions[20])(char* buff, int buffSize, GameRoom *room, connection *player);
 public:
 	bool Init();
 	static void AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, int maxconnnumber, GameRoom *firstRoom);
-	static void Handshake(connection client, GameRoom *firstRoom);
+	//static void Handshake(connection client, GameRoom *firstRoom);
 	static GameRoom* NewRoom(GameRoom newroom, GameRoom* firstRoom);
 	static bool AnyActiveRooms(GameRoom *firstRoom);
 	static void AsyncRoomThr(GameRoom *room);
 	static void AsyncUserConnectionThr(GameRoom *room, connection *player);
+	static void AsyncUserConnection(GameRoom *firstRoom, connection player);
 	static void SendPhysicsToClient(GameRoom *room, connection *client);
 	static const char* WSAErrorToString();
-	static unsigned int randNum();
+	//static unsigned int randNum();
 	static void ZeroBuff(char *firstByte, int sizeOfBuff);
 };
