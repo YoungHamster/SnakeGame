@@ -68,8 +68,10 @@ private:
 	static connection players[10000];
 
 	/* static array of pointers on functions for network final state machine */
-	static int(*functions[20])(char* buff, int buffSize, GameRoom *room, connection *player);
+	static int(*functions[12])(char* buff, int buffSize, GameRoom *room, connection *player);
 public:
+	std::wstring serverName = L"SnakeGame server";
+
 	bool Init();
 	static void AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, int maxconnnumber, GameRoom *firstRoom);
 	//static void Handshake(connection client, GameRoom *firstRoom);

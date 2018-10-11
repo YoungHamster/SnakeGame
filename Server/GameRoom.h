@@ -20,17 +20,18 @@ public:
 	wchar_t* title = const_cast<wchar_t*>(L"New room");
 
 	bool currentlyUsingPDs = false;
-	connection players[4];
+	connection* players[4];
 	double GameSpeed = 1.0;
 
-	void Init(connection roomcreator);
-	int ConnectPlayer(connection player);
+	void Init(connection *roomcreator);
+	int ConnectPlayer(connection *player);
 	void OneTick();
 	bool AnyConnectedPlayers();
 	std::vector<PhysicalObject>& GetPhysicsForPlayer();
 	void ChangePlayerDirection(char dir, connection* player);
 	short GetSnakeLenght(int SnakeID);
 	std::vector<SnakeBlock>& GetSnake(int SnakeID);
+	char GetPlayerDir(int playerID);
 	
 
 	/*void o()
