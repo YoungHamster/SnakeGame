@@ -5,13 +5,14 @@
 struct connection
 {
 	SOCKET connectSock;
-	unsigned long long uuid;
+	unsigned long long uuid; // deprecated
 	wchar_t* nickname;
 	char gameDir = 0;
 	bool recvedPhysics = false;
 	bool connected = false;
 	bool votedForStart = false;
 	bool compressPhysics = true;
-	int gameDataProtocol = 0;
-	GameRoom* gameRoom = NULL;
+	GameRoom* gameRoom = NULL; // deprecated
+	short ownIdConnectionsArray;
+	short roomIdInRoomsArray;
 };

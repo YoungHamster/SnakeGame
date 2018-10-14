@@ -32,6 +32,8 @@ public:
 	short GetSnakeLenght(int SnakeID);
 	std::vector<SnakeBlock>& GetSnake(int SnakeID);
 	char GetPlayerDir(int playerID);
+	int DisconnectPlayer(connection *player);
+	int ReloadGame() { game.Init(64, 36, 5, 5, 5, 5); }
 	
 
 	/*void o()

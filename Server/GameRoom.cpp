@@ -13,7 +13,7 @@ int GameRoom::ConnectPlayer(connection *player)
 {
 	for (int i = 0; i < 4; i++)
 	{
-		if (!players[i]->connected)
+		if (players[i] == NULL ? true : !players[i]->connected)
 		{
 			players[i] = player;
 			return i;
@@ -107,5 +107,16 @@ char GameRoom::GetPlayerDir(int playerID)
 	if (players[playerID] != NULL)
 	{
 		return players[playerID]->gameDir;
+	}
+}
+
+int GameRoom::DisconnectPlayer(connection *player)
+{
+	for (int i = 0; i < 4; i++)
+	{
+		if (players[i] == player)
+		{
+			players[i] = NULL;
+		}
 	}
 }

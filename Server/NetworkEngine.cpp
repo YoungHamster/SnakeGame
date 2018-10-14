@@ -16,38 +16,48 @@ bool NetworkEngine::Init()
 	listenSock = socket(AF_INET, SOCK_STREAM, NULL);
 	bind(listenSock, (SOCKADDR*)&address, sizeof(address));
 	listen(listenSock, SOMAXCONN);
-	std::thread acceptingthr(AcceptingThread, listenSock, address, 1000, &rooms[0]);
+	std::thread acceptingthr(AcceptingThread, listenSock, address, &players[0], &rooms[0]);
 	acceptingthr.detach();
 	std::cout << "Server started!" << std::endl;
 
-	functions[0] = Handshake;
-	functions[1] = SendMainInformationAboutServer;
-	functions[2] = SendActiveRoomsIds;
-	functions[3] = CreateNewRoom;
-	functions[4] = JoinExistingRoom;
-	functions[5] = LeaveRoom;
-	functions[6] = VoteForStart;
-	functions[7] = Pong;
-	functions[8] = SendTickInformation;
-	functions[9] = SynchronizeGame;
-	functions[10] = StopMatch;
+	functions[0] = SendMainInformationAboutServer;
+	functions[1] = SendActiveRoomsIds;
+	functions[2] = CreateNewRoom;
+	functions[3] = JoinExistingRoom;
+	functions[4] = LeaveRoom;
+	functions[5] = VoteForStart;
+	functions[6] = Pong;
+	functions[7] = SendTickInformation;
+	functions[8] = SynchronizeGame;
+	functions[9] = StopMatch;
+	functions[10] = PauseMatch;
 	functions[11] = Disconnect;
 	return true;
 }
 
-void NetworkEngine::AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, int maxconnnumber, GameRoom *firstRoom)
+void NetworkEngine::AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, connection* firstConnection, GameRoom *firstRoom)
 {
 	int addrlen = sizeof(address);
 	SOCKET connectSock;
-	connection newPlayer;
+	connection *newPlayer = firstConnection;
 	while (serverrunning)
 	{
-		newPlayer.connected = false;
-		if (newPlayer.connectSock = accept(listenSock, (SOCKADDR*)&address, &addrlen))
+		while (newPlayer->connected)
 		{
-			if (newPlayer.connectSock != INVALID_SOCKET)
+			newPlayer = firstConnection;
+			for (int i = 0; i < 10000; i++, newPlayer++)
 			{
-				newPlayer.connected = true;
+				if (!newPlayer->connected)
+				{
+					i = 10000;
+				}
+			}
+		}
+		if (newPlayer->connectSock = accept(listenSock, (SOCKADDR*)&address, &addrlen))
+		{
+			if (newPlayer->connectSock != INVALID_SOCKET)
+			{
+				newPlayer->connected = true;
 				std::cout << "Connection was found:" << inet_ntoa(address.sin_addr) << ':' << address.sin_port << std::endl;
 				std::thread handshake(Handshake, newPlayer, firstRoom);
 				handshake.detach();
@@ -73,14 +83,13 @@ void NetworkEngine::AsyncUserConnection(GameRoom *firstRoom, connection connecti
 
 GameRoom* NetworkEngine::NewRoom(GameRoom newroom, GameRoom* firstRoom)
 {
-	for (int i = 0; i < 250; i++)
+	for (int i = 0; i < 1000; i++, firstRoom++)
 	{
 		if (!firstRoom->roomActive)
 		{
 			*firstRoom = newroom;
 			return firstRoom;
 		}
-		firstRoom++;
 	}
 }
 
@@ -148,9 +157,9 @@ const char* NetworkEngine::WSAErrorToString()
 
 void NetworkEngine::ZeroBuff(char *firstByte, int sizeOfBuff)
 {
-	for (int i = 0; i < sizeOfBuff; i++, firstByte++)
+	for (int i = 0; i < sizeOfBuff; i++)
 	{
-		*firstByte = '\0';
+		firstByte[i] = '\0';
 	}
 }
 
@@ -173,7 +182,7 @@ unsigned int randNum()
 	return gen();
 }
 
-int Handshake(char *buff, int buffSize, GameRoom *firstRoom, connection *player)
+int NetworkEngine::Handshake(GameRoom *firstRoom, connection *player)
 {
 	GameRoom *room = firstRoom;
 	int nicknamelenght = 0;
@@ -224,7 +233,7 @@ int Handshake(char *buff, int buffSize, GameRoom *firstRoom, connection *player)
 
 		buff[i + 1] = uuidConv.bytes[i];
 	}
-	if (AnyActiveRooms(firstRoom))
+	/*if (AnyActiveRooms(firstRoom))
 	{
 		buff[9] = '\x02';
 		room = firstRoom;
@@ -246,13 +255,15 @@ int Handshake(char *buff, int buffSize, GameRoom *firstRoom, connection *player)
 	else
 	{
 		buff[9] = '\0';
-	}
+	}*/
 	send(player->connectSock, buff, bufflenght, NULL);
+	std::thread newUserThread(AsyncUserConnection, firstRoom, player);
 }
 
 int SendMainInformationAboutServer(char *buff, int buffSize, GameRoom *firstRoom, connection *player)
 {
-	
+	char infobuff[100];
+	infobuff[0] = 0x00;
 }
 
 int SendActiveRoomsIds(char *buff, int buffSize, GameRoom *firstRoom, connection *player)
@@ -285,33 +296,83 @@ int SendActiveRoomsIds(char *buff, int buffSize, GameRoom *firstRoom, connection
 
 int CreateNewRoom(char *buff, int buffSize, GameRoom *firstRoom, connection *player)
 {
-
+	for (int i = 0; i < 1000; i++)
+	{
+		if (!firstRoom[i].roomActive)
+		{
+			firstRoom[i].Init(player);
+			player->gameRoom = &firstRoom[i];
+			player->roomIdInRoomsArray = i;
+			char buff[3];
+			buff[0] = 0x03;
+			ShortToBytes conv;
+			conv.integer = i;
+			buff[1] = conv.bytes[0];
+			buff[2] = conv.bytes[1];
+			send(player->connectSock, buff, 3, NULL);
+			return 0;
+		}
+	}
 }
 
 int JoinExistingRoom(char *buff, int buffSize, GameRoom *firstRoom, connection *player)
 {
-
+	for (int i = 0; i < 1000; i++)
+	{
+		if (firstRoom[i].roomActive)
+		{
+			if (firstRoom[i].ConnectPlayer(player) == -1)
+			{
+				return -1; // probably all places in room are taken
+			}
+			else
+			{
+				player->gameRoom = &firstRoom[i];
+				player->roomIdInRoomsArray = i;
+				buff[0] = 0x04;
+				ShortToBytes conv;
+				conv.integer = i;
+				buff[1] = conv.bytes[0];
+				buff[2] = conv.bytes[1];
+				send(player->connectSock, buff, 3, NULL);
+			}
+		}
+	}
 }
 
 int LeaveRoom(char *buff, int buffSize, GameRoom *firstRoom, connection *player)
 {
-
+	firstRoom[player->roomIdInRoomsArray].DisconnectPlayer(player);
+	player->roomIdInRoomsArray = -1;
+	player->gameRoom = NULL;
+	char respone = 0x05;
+	send(player->connectSock, &respone, 1, NULL);
 }
 
 int VoteForStart(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
 {
+	if (firstRoom[player->roomIdInRoomsArray].matchRunning)
+	{
+		return -2;
+	}
+	char respone[2];
+	respone[0] = 0x06;
 	player->votedForStart = true;
 	for (int i = 0; i < 4; i++)
 	{
-		if (player->gameRoom->players[i] != NULL)
+		if (firstRoom[player->roomIdInRoomsArray].players[i] != NULL)
 		{
-			if (player->gameRoom->players[i]->votedForStart == false)
+			if (firstRoom[player->roomIdInRoomsArray].players[i]->votedForStart == false)
 			{
+				respone[1] = false;
+				send(player->connectSock, respone, 2, NULL);
 				return -1;
 			}
 		}
 	}
-	player->gameRoom->matchRunning = true;
+	firstRoom[player->roomIdInRoomsArray].matchRunning = true;
+	respone[0] = true;
+	send(player->connectSock, respone, 2, NULL);
 	return 0;
 }
 
@@ -334,42 +395,42 @@ int SendTickInformation(char* buff, int buffSize, GameRoom *firstRoom, connectio
 {
 	// 2 BYTES-HEADER, 4 BYTES-SNAKESDIRECTIONS, 4 BYTES-2 SHORTS(APPLE AABB.min), 8 BYTES - 4 SHORTS(LENGHTS OF SNAKES)
 	char oneTickPacket[2 + 4 + 4 + 8];
-	oneTickPacket[0] = 0x05;
+	oneTickPacket[0] = 0x08;
 	oneTickPacket[1] = 0x01;
-	oneTickPacket[2] = player->gameRoom->players[0]->gameDir;
-	oneTickPacket[3] = player->gameRoom->players[1]->gameDir;
-	oneTickPacket[4] = player->gameRoom->players[2]->gameDir;
-	oneTickPacket[5] = player->gameRoom->players[3]->gameDir;
+	oneTickPacket[2] = firstRoom[player->roomIdInRoomsArray].players[0]->gameDir;
+	oneTickPacket[3] = firstRoom[player->roomIdInRoomsArray].players[1]->gameDir;
+	oneTickPacket[4] = firstRoom[player->roomIdInRoomsArray].players[2]->gameDir;
+	oneTickPacket[5] = firstRoom[player->roomIdInRoomsArray].players[3]->gameDir;
 	ShortToBytes converter;
-	for (int i = 0; i < player->gameRoom->GetPhysicsForPlayer().size(); i++)
+	for (int i = 0; i < firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer().size(); i++)
 	{
-		if (player->gameRoom->GetPhysicsForPlayer()[i].type == APPLE)
+		if (firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer()[i].type == APPLE)
 		{
-			converter.integer = player->gameRoom->GetPhysicsForPlayer()[i].borders.min.x;
+			converter.integer = firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer()[i].borders.min.x;
 			oneTickPacket[6] = converter.bytes[0];
 			oneTickPacket[7] = converter.bytes[1];
-			converter.integer = player->gameRoom->GetPhysicsForPlayer()[i].borders.min.y;
+			converter.integer = firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer()[i].borders.min.y;
 			oneTickPacket[8] = converter.bytes[0];
 			oneTickPacket[9] = converter.bytes[1];
-			i = player->gameRoom->GetPhysicsForPlayer().size();
+			i = firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer().size();
 		}
 	}
 	for (int i = 0; i < 4; i++)
 	{
-		converter.integer = player->gameRoom->GetSnakeLenght(i);
+		converter.integer = firstRoom[player->roomIdInRoomsArray].GetSnakeLenght(i);
 		oneTickPacket[10 + i * 2] = converter.bytes[0];
 		oneTickPacket[11 + i * 2] = converter.bytes[1];
 	}
 	return send(player->connectSock, oneTickPacket, sizeof(oneTickPacket), NULL);
 }
 
-int SynchronizeGame(char* buff, int buffSize, GameRoom *gameRoom, connection *player)
+int SynchronizeGame(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
 {
-	short snake1Size = gameRoom->GetSnakeLenght(0);
-	short snake2Size = gameRoom->GetSnakeLenght(1);
-	short snake3Size = gameRoom->GetSnakeLenght(2);
-	short snake4Size = gameRoom->GetSnakeLenght(3);
-	short physicsSize = gameRoom->GetPhysicsForPlayer().size();
+	short snake1Size = firstRoom[player->roomIdInRoomsArray].GetSnakeLenght(0);
+	short snake2Size = firstRoom[player->roomIdInRoomsArray].GetSnakeLenght(1);
+	short snake3Size = firstRoom[player->roomIdInRoomsArray].GetSnakeLenght(2);
+	short snake4Size = firstRoom[player->roomIdInRoomsArray].GetSnakeLenght(3);
+	short physicsSize = firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer().size();
 	// 2 bytes - packet header
 	// 10 bytes - 5shorts: lenght of physics vector, lenghts of 4 SnakeBlocks vector
 	short buffsize = physicsSize * sizeof(PhysicalObject) + (snake1Size + snake2Size + snake3Size + snake4Size) * sizeof(SnakeBlock) + 2 + 10;
@@ -377,46 +438,33 @@ int SynchronizeGame(char* buff, int buffSize, GameRoom *gameRoom, connection *pl
 	buffsizeConverter.integer = buffsize;
 	send(player->connectSock, buffsizeConverter.bytes, sizeof(ShortToBytes), NULL); // send size of buffer for экономия of memory on client side
 	char *buff = new char[buffsize];
-	buff[0] = 0x06;
-	buff[1] = 0x02;
-	ShortToBytes lenghtsConverter;
+	buff[0] = 0x09;
+	ShortToBytes lenghtsConverter; // union
 	lenghtsConverter.integer = physicsSize;
-	buff[2] = lenghtsConverter.bytes[0];
-	buff[3] = lenghtsConverter.bytes[1];
-	lenghtsConverter.integer = snake1Size;
-	buff[4] = lenghtsConverter.bytes[0];
-	buff[5] = lenghtsConverter.bytes[1];
-	lenghtsConverter.integer = snake2Size;
-	buff[6] = lenghtsConverter.bytes[0];
-	buff[7] = lenghtsConverter.bytes[1];
-	lenghtsConverter.integer = snake3Size;
-	buff[8] = lenghtsConverter.bytes[0];
-	buff[9] = lenghtsConverter.bytes[1];
-	lenghtsConverter.integer = snake4Size;
-	buff[10] = lenghtsConverter.bytes[0];
-	buff[11] = lenghtsConverter.bytes[1];
+	buff[1] = lenghtsConverter.bytes[0];
+	buff[2] = lenghtsConverter.bytes[1];
 
 	for (int i = 0; i < 4; i++)
 	{
-		lenghtsConverter.integer = gameRoom->GetSnakeLenght(i);
-		buff[2 + i * sizeof(short)] = lenghtsConverter.bytes[0];
-		buff[3 + i * sizeof(short)] = lenghtsConverter.bytes[1];
+		lenghtsConverter.integer = firstRoom[player->roomIdInRoomsArray].GetSnakeLenght(i);
+		buff[3 + i * sizeof(short)] = lenghtsConverter.bytes[0];
+		buff[4 + i * sizeof(short)] = lenghtsConverter.bytes[1];
 	}
 
-	PhysicalObjectToBytes physicalObjectsConv;
+	PhysicalObjectToBytes physicalObjectsConv; // union
 	for (int i = 0; i < physicsSize; i++)
 	{
-		physicalObjectsConv.obj = gameRoom->GetPhysicsForPlayer()[i];
+		physicalObjectsConv.obj = firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer()[i];
 		for (int j = 0; j < sizeof(PhysicalObject); j++)
 		{
-			buff[i * sizeof(PhysicalObject) + j + 12] = physicalObjectsConv.bytes[j];
+			buff[i * sizeof(PhysicalObject) + j + 11] = physicalObjectsConv.bytes[j];
 		}
 	}
 	SnakeBlockToBytes snakeBlocksConv; // union
 	for (int i = 0; i < snake1Size; i++)
 	{
-		snakeBlocksConv.block = gameRoom->GetSnake(0)[i];
-		int bytenum = i * sizeof(SnakeBlock) + physicsSize * sizeof(PhysicalObject) + 12;
+		snakeBlocksConv.block = firstRoom[player->roomIdInRoomsArray].GetSnake(0)[i];
+		int bytenum = i * sizeof(SnakeBlock) + physicsSize * sizeof(PhysicalObject) + 11;
 		for (int j = 0; j < sizeof(SnakeBlock); j++)
 		{
 			buff[j + bytenum] = snakeBlocksConv.bytes[j];
@@ -424,8 +472,8 @@ int SynchronizeGame(char* buff, int buffSize, GameRoom *gameRoom, connection *pl
 	}
 	for (int i = 0; i < snake2Size; i++)
 	{
-		snakeBlocksConv.block = gameRoom->GetSnake(1)[i];
-		int bytenum = snake1Size * sizeof(SnakeBlock) + i * sizeof(SnakeBlock) + physicsSize * sizeof(PhysicalObject) + 12;
+		snakeBlocksConv.block = firstRoom[player->roomIdInRoomsArray].GetSnake(1)[i];
+		int bytenum = snake1Size * sizeof(SnakeBlock) + i * sizeof(SnakeBlock) + physicsSize * sizeof(PhysicalObject) + 11;
 		for (int j = 0; j < sizeof(SnakeBlock); j++)
 		{
 			buff[j + bytenum] = snakeBlocksConv.bytes[j];
@@ -433,16 +481,17 @@ int SynchronizeGame(char* buff, int buffSize, GameRoom *gameRoom, connection *pl
 	}
 	for (int i = 0; i < snake3Size; i++)
 	{
-		snakeBlocksConv.block = gameRoom->GetSnake(2)[i];
-		int bytenum = snake1Size * sizeof(SnakeBlock) + snake2Size * sizeof(SnakeBlock) + i * sizeof(SnakeBlock) + physicsSize * sizeof(PhysicalObject) + 12;
+		snakeBlocksConv.block = firstRoom[player->roomIdInRoomsArray].GetSnake(2)[i];
+		int bytenum = snake1Size * sizeof(SnakeBlock) + snake2Size * sizeof(SnakeBlock) + i * sizeof(SnakeBlock) + physicsSize * sizeof(PhysicalObject) + 11;
 		for (int j = 0; j < sizeof(SnakeBlock); j++)
 		{
 			buff[j + bytenum] = snakeBlocksConv.bytes[j];
 		}
-	}for (int i = 0; i < snake4Size; i++)
+	}
+	for (int i = 0; i < snake4Size; i++)
 	{
-		snakeBlocksConv.block = gameRoom->GetSnake(3)[i];
-		int bytenum = snake1Size * sizeof(SnakeBlock) + snake2Size * sizeof(SnakeBlock) + snake3Size * sizeof(SnakeBlock) + i * sizeof(SnakeBlock) + physicsSize * sizeof(PhysicalObject) + 12;
+		snakeBlocksConv.block = firstRoom[player->roomIdInRoomsArray].GetSnake(3)[i];
+		int bytenum = snake1Size * sizeof(SnakeBlock) + snake2Size * sizeof(SnakeBlock) + snake3Size * sizeof(SnakeBlock) + i * sizeof(SnakeBlock) + physicsSize * sizeof(PhysicalObject) + 11;
 		for (int j = 0; j < sizeof(SnakeBlock); j++)
 		{
 			buff[j + bytenum] = snakeBlocksConv.bytes[j];
@@ -453,12 +502,26 @@ int SynchronizeGame(char* buff, int buffSize, GameRoom *gameRoom, connection *pl
 
 int StopMatch(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
 {
-	player->gameRoom->matchRunning = false;
+	char respone;
+	respone = 0x0A;
+	firstRoom[player->roomIdInRoomsArray].matchRunning = false;
+	firstRoom[player->roomIdInRoomsArray].ReloadGame();
+	send(player->connectSock, &respone, 1, NULL);
+}
+
+int PauseMatch(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
+{
+	char respone;
+	respone = 0x0B;
+	firstRoom[player->roomIdInRoomsArray].matchRunning = false;
+	send(player->connectSock, &respone, 1, NULL);
 }
 
 int Disconnect(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
 {
+	firstRoom[player->roomIdInRoomsArray].DisconnectPlayer(player);
 	player->connected = false;
+	player->gameRoom = NULL;
 	closesocket(player->connectSock);
 	return 0;
 }

@@ -73,8 +73,8 @@ public:
 	std::wstring serverName = L"SnakeGame server";
 
 	bool Init();
-	static void AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, int maxconnnumber, GameRoom *firstRoom);
-	//static void Handshake(connection client, GameRoom *firstRoom);
+	static void AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, connection* firstConnection, GameRoom *firstRoom);
+	static int Handshake(GameRoom *firstRoom, connection *player);
 	static GameRoom* NewRoom(GameRoom newroom, GameRoom* firstRoom);
 	static bool AnyActiveRooms(GameRoom *firstRoom);
 	static void AsyncRoomThr(GameRoom *room);

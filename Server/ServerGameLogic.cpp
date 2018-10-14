@@ -11,6 +11,9 @@ void GameLogic::Reset()
 
 bool GameLogic::Init(short gameFieldWidth, short gameFieldHeight, short snake1Length, short snake2Length, short snake3Length, short snake4Length)
 {
+	this->gameFieldWidth = gameFieldWidth;
+	this->gameFieldHeight = gameFieldHeight;
+
 	Reset();
 
 	physics.resize(5 + snake1Length + snake2Length + snake3Length + snake4Length);
@@ -242,7 +245,8 @@ int GameLogic::OneTick(char snake1dir, char snake2dir, char snake3dir, char snak
 					if (physics[j].type == APPLE)
 					{
 						EnlargeSnake(1, i);
-						apple.Spawn(appleSpawnZone, &physics[apple.GetPhysicalBodyID()]);
+						//apple.Spawn(appleSpawnZone, &physics[apple.GetPhysicalBodyID()]);
+						SpawnApple();
 					}
 					else
 					{
@@ -509,6 +513,38 @@ void GameLogic::KillSnake(short SnakeID)
 		break;
 	}
 	snakes[SnakeID].erase(snakes[SnakeID].begin() + 1, snakes[SnakeID].end());
+}
+
+void GameLogic::SpawnApple()
+{
+	std::vector<AABB> possibleApplePositions;
+	AABB possibleApplePosition;
+	for (int i = 0; i < gameFieldWidth; i++)
+	{
+		for (int j = 0; j < gameFieldHeight; j++)
+		{
+			possibleApplePosition.min.x = i;
+			possibleApplePosition.min.y = j;
+			possibleApplePosition.max.x = i + 1;
+			possibleApplePosition.max.y = j + 1;
+			possibleApplePositions.push_back(possibleApplePosition);
+			for (int k = 0; k < physics.size(); k++)
+			{
+				if (AABBvsAABB(possibleApplePosition, physics[k].borders) && physics[k].type != DEAD_SNAKE)
+				{
+					possibleApplePositions.pop_back();
+				}
+			}
+		}
+	}
+	physics[apple.GetPhysicalBodyID()].borders = possibleApplePositions[randomNumber(0, possibleApplePositions.size())];
+}
+
+/* Once i will write this function and rewrite renderer, but not now */
+void GameLogic::AddSnake(int snakeLenght, AABB snakeHead, int headDir)
+{
+	std::vector<SnakeBlock> newSnake;
+
 }
 
 int GameLogic::HandleAIForSnake(short SnakeID)
