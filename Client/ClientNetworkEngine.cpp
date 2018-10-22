@@ -1,9 +1,9 @@
 #include "ClientNetworkEngine.h"
 
-int* ClientNetworkEngine::ConnectPart1(const char* ip, unsigned short port, int* numberOfRooms)
+bool ClientNetworkEngine::ConnectToServer(std::wstring *nickname, const char* ip, unsigned short port)
 {
 	out.Write(ip);
-	ConnectionState = HANDSHAKING;
+	connectionState = HANDSHAKING;
 	game.Init(64, 36, 5, 5, 5, 5);
 	int succ;
 	WSAData wData;
@@ -17,198 +17,279 @@ int* ClientNetworkEngine::ConnectPart1(const char* ip, unsigned short port, int*
 
 	if (sock == INVALID_SOCKET)
 	{
+#ifdef NETWORK_PROFILING
 		out.Write("connect() error\n");
-		ConnectionState = DISCONNECTED;
+#endif
+		connectionState = DISCONNECTED;
 		return NULL;
 	}
-	char buff[4009];
-	buff[0] = '\x01';
-	buff[1] = '\x00';
-	buff[2] = '\x43';
-	//send(sock, buff, 3, NULL);
-	out.Write("Sended 1st packet to server! " + std::to_string(send(sock, buff, 3, NULL)) + " bytes." + "\n");
+
+	/* Maximum size of packet in this function, 64 wchars + 1 header byte */
+	char buff[129];
+	int firstBuffLenght = 1;
+	if (nickname->length() >= 64)
+	{
+		return false;
+	}
+	buff[0] = (char)(nickname->length() * 2);
+	buff[buff[0] + 2] = '\0';
+	BytesToWchar nicknameConv;
+	for (int i = 0; i < nickname->length(); i++, firstBuffLenght += 2)
+	{
+		nicknameConv.wchar = nickname->at(i);
+		buff[1 + i * sizeof(wchar_t)];
+		buff[2 + i * sizeof(wchar_t)];
+	}
+	int sendRes = send(sock, buff, firstBuffLenght, NULL);
+#ifdef NETWORK_PROFILING
+	out.Write("Sended 1st packet to server! " + std::to_string(sendRes) + " bytes." + "\n");
+#endif
 
 	BytesToULL uuidconv;
-	BytesToInt roomIdconv;
-	int recvRes = recv(sock, buff, sizeof(buff), NULL);
-
-	out.Write("Received 1st packet from server! " + std::to_string(recvRes) + " bytes." + "\n");
-
-	int roomsNumber = (recvRes - 9) / 4;
+	if (recv(sock, buff, sizeof(buff), NULL) != 9 || buff[0] != '\x01')
+	{
+#ifdef NETWORK_PROFILING
+		out.Write("Error while handshaking with server!\n");
+#endif
+		return false;
+	}
+#ifdef NETWORK_PROFILING
+	out.Write("Received 1st packet from server!\n");
+#endif
 	for (int i = 0; i < 8; i++)
 	{
 		uuidconv.bytes[i] = buff[i + 1];
 	}
 	UUID = uuidconv.integer;
-
+#ifdef NETWORK_PROFILING
 	out.Write(std::to_string(UUID) + " - UUID\n");
+#endif
+	return true;
+}
+ServerInfo ClientNetworkEngine::GetInfoAboutServer()
+{
+	ServerInfo servInfo;
 
-	if (roomsNumber > 0)
-	{
-		if (rooms)
-		{
-			delete[] rooms;
-		}
-		rooms = new int[roomsNumber];
-		*numberOfRooms = roomsNumber;
-	}
-	// To tell menu that connection was successfull I don't return NULL, but I set number of rooms to 0
-	else
-	{
-		*numberOfRooms = 0;
-		rooms = new int[1];
-		return rooms;
-	}
-	for (int i = 0; i < roomsNumber; i++)
+	/* Get active server rooms info */
+	char buff[4000];
+	buff[0] = 0x01;
+#ifdef NETWORK_PROFILING
+	auto time = std::chrono::high_resolution_clock::now();
+	send(sock, buff, 1, NULL);
+	int numberOfBytes = recv(sock, buff, sizeof(buff), NULL);
+	auto secondTime = std::chrono::high_resolution_clock::now();
+	out.Write("Delay before getting number of rooms = " + std::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(secondTime - time).count()) + "nanoseconds\n");
+#elif
+	send(sock, buff, 1, NULL);
+#endif
+	BytesToInt activeRoomsConv;
+	for (int i = 0; i < numberOfBytes / 4; i++)
 	{
 		for (int j = 0; j < sizeof(int); j++)
 		{
-			roomIdconv.bytes[j] = buff[i * sizeof(int) + j + 9];
+			activeRoomsConv.bytes[j] = buff[i * sizeof(int) + j];
 		}
-		rooms[i] = roomIdconv.integer;
+		servInfo.activeRoomsIDs.push_back(activeRoomsConv.integer);
 	}
-	return rooms;
+
+	/* Test ping */
+	buff[0] = 0x06;
+	send(sock, buff, 1, NULL);
+	for (int i = 0; i < 512; i++)
+	{
+		buff[i] = (char)randomNumber(60, 127);
+	}
+	time = std::chrono::high_resolution_clock::now();
+	send(sock, buff, 512, NULL);
+	recv(sock, buff, 512, NULL);
+	secondTime = std::chrono::high_resolution_clock::now();
+	long long delta = std::chrono::duration_cast<std::chrono::nanoseconds>(secondTime - time).count();
+	servInfo.pingInMs = delta / 1000000;
+#ifdef NETWORK_PROFILING
+	out.Write("Ping = " + std::to_string(delta) + "nanoseconds\n");
+#endif
+
+	return servInfo;
 }
 
-bool ClientNetworkEngine::ConnectPart2(int playerChoose)
+bool ClientNetworkEngine::CreateNewRoom()
 {
-	char buff[100];
-	buff[0] = '\x02';
-
-	BytesToInt roomIDConverter;
-	if (playerChoose != CREATE_NEW_ROOM_ON_SERVER)
-	{
-		buff[1] = '\x02';
-		roomIDConverter.integer = playerChoose;
-		for (int i = 0; i < 4; i++)
-		{
-			buff[i + 2] = roomIDConverter.bytes[i];
-		}
-		send(sock, buff, 6, NULL);
-	}
-	else
-	{
-		buff[1] = 0x01;
-		send(sock, buff, 2, NULL);
-	}
+	char buff[3];
+	buff[0] = 0x02;
+	send(sock, buff, 1, NULL);
 	recv(sock, buff, sizeof(buff), NULL);
-	for (int i = 0; i < 4; i++)
+	if (buff[0] != 0x02)
 	{
-		roomIDConverter.bytes[i] = buff[i + 1];
+		return false;
 	}
-	roomId = roomIDConverter.integer;
-	ConnectionState = WAITING_MATCH_START;
+	BytesToShort roomIDconv;
+	roomIDconv.bytes[0] = buff[1];
+	roomIDconv.bytes[1] = buff[2];
+	currentRoomID = roomIDconv.integer;
 	return true;
 }
 
-NetStates ClientNetworkEngine::NetworkTick(NetEngineInput input)
+bool ClientNetworkEngine::JoinExistingRoom(short roomID)
 {
-	if (ConnectionState == MATCH_DESYNC || ConnectionState == SOMEERROR)
+	char buff[3];
+	buff[0] = 0x03;
+	BytesToShort roomIDconv;
+	roomIDconv.integer = roomID;
+	buff[1] = roomIDconv.bytes[0];
+	buff[2] = roomIDconv.bytes[1];
+	send(sock, buff, 3, NULL);
+	recv(sock, buff, 3, NULL);
+	if (buff[0] != '\x03')
 	{
-		if (SynchronizeGame())
-		{
-			ConnectionState = MATCH_OK;
-		}
-		else
-		{
-			return ConnectionState;
-		}
+#ifdef NETWORK_PROFILING
+		out.Write("Error while trying to join existing room with id: " + std::to_string(roomID) + '\n');
+#endif
+		return false;
 	}
-	if (input == TURN_UP || input == TURN_DOWN || input == TURN_LEFT || input == TURN_RIGHT)\
-	{
-		return GameTick(input);
-	}
-	switch (input)
-	{
-	case VOTE_FOR_START:
-		if (ConnectionState == WAITING_MATCH_START)
-		{
-			if (VoteForStart())
-			{
-				if (SynchronizeGame())
-				{
-					ConnectionState = MATCH_OK;
-				}
-				else
-				{
-					ConnectionState = MATCH_DESYNC;
-				}
-			}
-		}
-		break;
-	case DISCONNECT:
-		closesocket(sock);
-		ConnectionState = DISCONNECTED;
-		break;
-	}
-
-	return ConnectionState;
+	currentRoomID = roomID;
+	return true;
 }
 
-NetStates ClientNetworkEngine::GameTick(NetEngineInput input)
+bool ClientNetworkEngine::LeaveRoom()
 {
-	if (input != TURN_UP && input != TURN_DOWN && input != TURN_LEFT && input != TURN_RIGHT)
+	char buff[1];
+	buff[0] = 0x04;
+	send(sock, buff, 1, NULL);
+	recv(sock, buff, 1, NULL);
+	if (buff[0] != 0x04)
 	{
-		ConnectionState = SOMEERROR;
-		out.Write("WRONG PARAMETERS TO GameTick() FUNCTION\n");
-		return ConnectionState;
+#ifdef NETWORK_PROFILING
+		out.Write("Error while trying to leave room, server sent wrong respone!\n");
+#endif
+		return false;
 	}
-	char dir = (char)input;
-	char buff[3];
-	buff[0] = '\x07';
-	buff[1] = 2;
-	buff[2] = dir;
-	send(sock, buff, 3, NULL);
-	// 2 BYTES-HEADER, 4 BYTES-SNAKESDIRECTIONS, 4 BYTES-2 SHORTS(APPLE AABB.min), 8 BYTES - 4 SHORTS(LENGHTS OF SNAKES)
-	char oneTickPacket[2 + 4 + 4 + 8];
-	recv(sock, oneTickPacket, sizeof(oneTickPacket), NULL);
-	if (oneTickPacket[0] != '\x0f' || oneTickPacket[1] != '\x03')
+	return true;
+}
+
+bool ClientNetworkEngine::VoteForStart()
+{
+	char buff[2];
+	buff[0] = 0x05;
+	send(sock, buff, 1, NULL);
+	recv(sock, buff, 2, NULL);
+	if (buff[0] != 0x05)
 	{
-		ConnectionState = SOMEERROR;
-		out.Write("SERVER SENDED WRONG PACKET!!!\n");
-		return ConnectionState;
+#ifdef NETWORK_PROFILING
+		out.Write("Error while trying to vote for match start, server sent wrong respone!\n");
+#endif
+		return false;
 	}
-	PhysicalObject apple;
-	apple.type = APPLE;
-	BytesToShort shortsConv;
-	short shorts[2 + 4];
+	if (buff[1] != true)
+	{
+#ifdef NETWORK_PROFILING
+		out.Write("Can't start match, all players should vote!\n");
+#endif
+		return false;
+	}
+	return true;
+}
+
+int ClientNetworkEngine::Ping()
+{
+	char buff[512];
+	for (int i = 0; i < 512; i++)
+	{
+		buff[i] = randomNumber(0, 255);
+	}
+	buff[0] = 0x06;
+	if (send(sock, buff, 1, NULL) != 1)
+	{
+		out.Write("Can't ping server!\n");
+		return -1;
+	}
+	auto time = std::chrono::high_resolution_clock::now();
+	send(sock, buff, 512, NULL);
+	recv(sock, buff, 512, NULL);
+	auto secondTime = std::chrono::high_resolution_clock::now();
+	long long ping = std::chrono::duration_cast<std::chrono::nanoseconds>(secondTime - time).count();
+	double kbpersec = 1000 * 1000 * 1000 / ping;
+#ifdef NETWORK_PROFILING
+	out.Write("Ping = " + std::to_string(ping) + "nanosecond, connection speed = " + std::to_string(kbpersec) + "kb/sec\n");
+#endif
+	return (int)ping / 1000000;
+}
+
+NetStates ClientNetworkEngine::GameTick(char dir)
+{
+	char buff[18];
+	buff[0] = 0x07;
+	send(sock, buff, 1, NULL);
+	recv(sock, buff, sizeof(buff), NULL);
+	game.OneTick(buff[2], buff[3], buff[4], buff[5]);
+	BytesToShort someStuffConverter[6];
 	for (int i = 0; i < 6; i++)
 	{
-		shortsConv.bytes[0] = oneTickPacket[6 + i * sizeof(short)];
-		shortsConv.bytes[0] = oneTickPacket[6 + i * sizeof(short) + 1];
-		shorts[i] = shortsConv.integer;
+		someStuffConverter[i].bytes[0] = buff[6 + i * sizeof(short)];
+		someStuffConverter[i].bytes[1] = buff[7 + i * sizeof(short)];
 	}
-
-	game.OneTick(oneTickPacket[2], oneTickPacket[3], oneTickPacket[4], oneTickPacket[5]);
-
-	apple.borders.min.x = shorts[0];
-	apple.borders.min.y = shorts[1];
-	apple.borders.max.x = apple.borders.min.x + 1;
-	apple.borders.max.y = apple.borders.min.y + 1;
-	for (int i = 0; i < game.physics.size(); i++)
+	game.ChangeApplePostition(someStuffConverter[0].integer, someStuffConverter[1].integer);
+	if (game.snakes[0].size() != someStuffConverter[2].integer || game.snakes[1].size() != someStuffConverter[3].integer
+		|| game.snakes[2].size() != someStuffConverter[4].integer || game.snakes[3].size() != someStuffConverter[5].integer)
 	{
-		if (game.physics[i].type == APPLE)
+		if (!SynchronizeGame())
 		{
-			game.physics[i] = apple;
-			i = game.physics.size();
+#ifdef NETWORK_PROFILING
+			out.Write("Crytical error! can't synchronyze game!\n");
+#endif
 		}
 	}
-	if (game.snakes[0].size() != shorts[2] || game.snakes[1].size() != shorts[3] || game.snakes[2].size() != shorts[4] || game.snakes[3].size() != shorts[5])
+	return connectionState;
+}
+
+bool ClientNetworkEngine::StopMatch()
+{
+	char buff[1];
+	buff[0] = 0x09;
+	send(sock, buff, 1, NULL);
+	recv(sock, buff, 1, NULL);
+	if (buff[0] != 0x09)
 	{
-		ConnectionState = MATCH_DESYNC;
+#ifdef NETWORK_PROFILING
+		out.Write("Crytical error! Can't stop match\n");
+#endif
+		return false;
 	}
-	return ConnectionState;
+	return false;
+}
+
+bool ClientNetworkEngine::PauseMatch()
+{
+	char buff[1];
+	buff[0] = 0x0A;
+	send(sock, buff, 1, NULL);
+	recv(sock, buff, 1, NULL);
+	if (buff[0] != 0x09)
+	{
+#ifdef NETWORK_PROFILING
+		out.Write("Crytical error! Can't pause match\n");
+#endif
+		return false;
+	}
+	return false;
+}
+
+bool ClientNetworkEngine::Disconnect()
+{
+	char buff[1];
+	buff[0] = 0x08;
+	send(sock, buff, 1, NULL);
+	Sleep(100);
+	closesocket(sock);
+	return true;
 }
 
 /**/
 /* */
 bool ClientNetworkEngine::SynchronizeGame()
 {
-	char enterbuff[3];
-	enterbuff[0] = '\x07';
-	enterbuff[1] = 1;
-	enterbuff[2] = 0;
-	send(sock, enterbuff, 3, NULL);
+	char enterbuff[1];
+	enterbuff[0] = 0x08;
+	send(sock, enterbuff, 1, NULL);
 
 	char buffsizebytes[2];
 	recv(sock, buffsizebytes, 2, NULL);
@@ -221,158 +302,74 @@ bool ClientNetworkEngine::SynchronizeGame()
 	char *buff = new char[buffsize];
 	recv(sock, buff, buffsize, NULL);
 
-	short physicssize;
-	short snake1Size;
-	short snake2Size;
-	short snake3Size;
-	short snake4Size;
-	BytesToShort lenghtsConverter;
-	lenghtsConverter.bytes[0] = buff[2];
-	lenghtsConverter.bytes[1] = buff[3];
-	physicssize = lenghtsConverter.integer;
-	
-	lenghtsConverter.bytes[0] = buff[4];
-	lenghtsConverter.bytes[1] = buff[5];
-	snake1Size = lenghtsConverter.integer;
-
-	lenghtsConverter.bytes[0] = buff[6];
-	lenghtsConverter.bytes[1] = buff[7];
-	snake2Size = lenghtsConverter.integer;
-
-	lenghtsConverter.bytes[0] = buff[8];
-	lenghtsConverter.bytes[1] = buff[9];
-	snake3Size = lenghtsConverter.integer;
-
-	lenghtsConverter.bytes[0] = buff[10];
-	lenghtsConverter.bytes[1] = buff[11];
-	snake4Size = lenghtsConverter.integer;
-	if (buff[0] != '\x0f' && buff[1] != '\x02')
+	/* 1st short - physics size, 4 others - snakes lenghts*/
+	BytesToShort lenghtsConverter[5];
+	for (int i = 0; i < 5; i++)
 	{
-		ConnectionState = SOMEERROR;
+		lenghtsConverter[i].bytes[0] = buff[1 + i * sizeof(short)];
+		lenghtsConverter[i].bytes[1] = buff[2 + i * sizeof(short)];
+	}
+	if (buff[0] != 0x08)
+	{
+		connectionState = SOMEERROR;
 		return false;
 	}
-	BytesToPhysicalObject physObjConv;
 	game.physics.clear();
 	game.snakes[0].clear();
 	game.snakes[1].clear();
 	game.snakes[2].clear();
 	game.snakes[3].clear();
-	for (int i = 0; i < physicssize; i++)
+	game.physics.resize(lenghtsConverter[0].integer);
+	for (int i = 0; i < 4; i++)
+	{
+		game.snakes[i].resize(lenghtsConverter[i + 1].integer);
+	}
+	BytesToPhysicalObject physicsConv;
+	for (int i = 0; i < lenghtsConverter[0].integer; i++)
 	{
 		for (int j = 0; j < sizeof(PhysicalObject); j++)
 		{
-			physObjConv.bytes[j] = buff[2 + i * sizeof(PhysicalObject) + j];
+			physicsConv.bytes[j] = buff[j + 1 + sizeof(PhysicalObject) * i];
 		}
-		game.physics.push_back(physObjConv.obj);
+		game.physics[i] = physicsConv.obj;
 	}
 
-	/* Pretty stupid way to convert bytes to snake blocks, but I can't come up with smth better :) */
-	BytesToSnakeBlock snakeBlocksConverter;
-	for (int k = 0; k < 4; k++)
+	BytesToSnakeBlock snakesConv;
+	for (int i = 0; i < lenghtsConverter[1].integer; i++)
 	{
-		int NumberOfConvertedSnakeBlocks = 0;
-		int SizeOfSnakeToBeConverted = snake1Size;
-		if (k > 2)
+		for (int j = 0; j < sizeof(SnakeBlock); j++)
 		{
-			NumberOfConvertedSnakeBlocks = snake1Size + snake2Size + snake3Size;
-			SizeOfSnakeToBeConverted = snake4Size;
+			snakesConv.bytes[j] = buff[j + 1 + lenghtsConverter[0].integer * sizeof(PhysicalObject)];
 		}
-		else
+		game.snakes[0][i] = snakesConv.block;
+	}
+	for (int i = 0; i < lenghtsConverter[2].integer; i++)
+	{
+		for (int j = 0; j < sizeof(SnakeBlock); j++)
 		{
-			if (k > 1)
-			{
-				NumberOfConvertedSnakeBlocks = snake1Size + snake2Size;
-				SizeOfSnakeToBeConverted = snake3Size;
-			}
-			else
-			{
-				if (k > 0)
-				{
-					NumberOfConvertedSnakeBlocks = snake1Size;
-					SizeOfSnakeToBeConverted = snake2Size;
-				}
-			}
+			snakesConv.bytes[j] = buff[j + 1 + lenghtsConverter[0].integer * sizeof(PhysicalObject) + lenghtsConverter[1].integer * sizeof(SnakeBlock)];
 		}
-		for (int i = NumberOfConvertedSnakeBlocks; i < NumberOfConvertedSnakeBlocks + SizeOfSnakeToBeConverted; i++)
+		game.snakes[1][i] = snakesConv.block;
+	}
+	for (int i = 0; i < lenghtsConverter[3].integer; i++)
+	{
+		for (int j = 0; j < sizeof(SnakeBlock); j++)
 		{
-			for (int j = 0; j < sizeof(SnakeBlock); j++)
-			{
-				snakeBlocksConverter.bytes[j] = buff[2 + physicssize * sizeof(PhysicalObject) + i * sizeof(SnakeBlock) + j + NumberOfConvertedSnakeBlocks * sizeof(SnakeBlock)];
-			}
-			game.snakes[k].push_back(snakeBlocksConverter.block);
+			snakesConv.bytes[j] = buff[j + 1 + lenghtsConverter[0].integer * sizeof(PhysicalObject) + (lenghtsConverter[1].integer + lenghtsConverter[2].integer) * sizeof(SnakeBlock)];
 		}
+		game.snakes[2][i] = snakesConv.block;
 	}
-
-}
-
-bool ClientNetworkEngine::VoteForStart()
-{
-	char buff[100];
-	buff[0] = 0x04;
-	send(sock, buff, 1, NULL);
-	recv(sock, buff, sizeof(buff), NULL);
-	if (buff[0] == 0x04)
+	for (int i = 0; i < lenghtsConverter[4].integer; i++)
 	{
-		return true;
-	}
-	if (buff[0] == 0x05)
-	{
-		return false;
-	}
-	return false;
-}
-
-std::vector<PhysicalObject>* ClientNetworkEngine::SendDirGetPhysics(char dir)
-{
-	std::vector<PhysicalObject> *physics = new std::vector<PhysicalObject>;
-	char buff[2304 * sizeof(PhysicalObject)];
-	buff[0] = 0x07;
-	if (dir >= 0 && dir <= 4)
-	{
-		buff[1] = dir;
-	}
-	else
-	{
-		buff[1] = '\0';
-	}
-	send(sock, buff, 2, NULL);
-	int physicsSize = (recv(sock, buff, sizeof(buff), NULL) - 1) / 4;
-	if (buff[0] == 0x08)
-	{
-		matchRunning = false;
-		return NULL;
-	}
-	BytesToPhysicalObject physicsConv;
-	if (buff[0] == 0x07)
-	{
-		for (int i = 0; i < physicsSize; i++)
+		for (int j = 0; j < sizeof(SnakeBlock); j++)
 		{
-			for (int j = 0; j < sizeof(PhysicalObject); j++)
-			{
-				physicsConv.bytes[j] = buff[i * sizeof(PhysicalObject) + j + 1];
-			}
-			physics->push_back(physicsConv.obj);
+			snakesConv.bytes[j] = buff[j + 1 + lenghtsConverter[0].integer * sizeof(PhysicalObject) + (lenghtsConverter[1].integer + lenghtsConverter[2].integer + lenghtsConverter[3].integer) * sizeof(SnakeBlock)];
 		}
-		return physics;
+		game.snakes[3][i] = snakesConv.block;
 	}
-	return NULL;
-}
 
-char* ClientNetworkEngine::SendDirGetCompressedPhysics(char dir)
-{
-	char* lowCompressedPhysics = new char[39 * 66 + 1];
-	lowCompressedPhysics[0] = '\x07';
-	if (dir >= 0 && dir <= 4)
-	{
-		lowCompressedPhysics[1] = dir;
-	}
-	else
-	{
-		lowCompressedPhysics[1] = '\0';
-	}
-	send(sock, lowCompressedPhysics, 2, NULL);
-	recv(sock, lowCompressedPhysics, 39 * 66 + 1, NULL);
-	return lowCompressedPhysics;
+	
+	return true;
 }
 
 std::vector<PhysicalObject>& ClientNetworkEngine::GetPhysicsForRenderer()
@@ -380,11 +377,6 @@ std::vector<PhysicalObject>& ClientNetworkEngine::GetPhysicsForRenderer()
 	return game.physics;
 }
 
-void ClientNetworkEngine::Disconnect()
-{
-	send(sock, "\xff", 1, NULL);
-	closesocket(sock);
-}
 
 void ClientNetworkEngine::ZeroBuff(char* firstByte, int sizeOfBuff)
 {

@@ -26,6 +26,7 @@ bool inmenu = true;
 bool gamerunning = true;
 static bool keyboardinputmodeText = true;
 std::wstring inputString;
+std::wstring nickname = L"PLAYER";
 
 bool singleplayer = true;
 bool twoPlayerMode = false;
@@ -46,9 +47,8 @@ static float GameSpeed = 1;
 short GameFieldWidth = GAMEFIELDWIDTH;
 short GameFieldHeight = GAMEFIELDHEIGTH;
 
-bool MenuTick(POINT p, int* lastMoveTime);
-void SingleplayerTick(POINT p, int* lastMoveTime);
-void MultiplayerTick(POINT p);
+void SingleplayerTick(int* lastMoveTime);
+void MultiplayerTick(int *lastNetTickTime);
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 void SortSnakesByLenght(Menu *menu, GameLogic *game);
@@ -102,10 +102,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 		}
 		return -2;
 	}
-	menu.Init(&rend, &GameSpeed, &inputString, &networkEngine);
+	menu.Init(&rend, &GameSpeed, &inputString, &nickname, &networkEngine);
 
 	/* Game timer */
-	int lastmovetime = 0;
+	int lastMoveTime = 0;
 
 	/* Things for getting cursor position */
 	POINT p;
@@ -121,15 +121,13 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 		}
 		else
 		{
-			GetCursorPos(&p);
-			ScreenToClient(windowhandle, &p);
 			if (inmenu)
 			{
 				Sleep(33);
-				if (clock() - lastmovetime >= 75 / GameSpeed)
+				if (clock() - lastMoveTime >= 75 / GameSpeed)
 				{
 					game.OneTick(0, 0, 0, 0);
-					lastmovetime = clock();
+					lastMoveTime = clock();
 				}
 				//menu.HandleMouseMovement(p);
 				switch (menu.GetMenuState())
@@ -139,15 +137,19 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 					singleplayer = true;
 					game.Init(GameFieldWidth, GameFieldHeight, Snake1Length, Snake1Length, Snake1Length, Snake1Length);
 					break;
-				case MultiplayerGame:
+				case MultiplayerChoosingRoom:
 					inmenu = false;
 					singleplayer = false;
+					keyboardinputmodeText = false;
 					break;
 				case Multiplayer:
 					keyboardinputmodeText = true;
 					break;
 				case ExitGame:
 					gamerunning = false;
+					break;
+				case MainMenu:
+					keyboardinputmodeText = true;
 					break;
 				default:
 					keyboardinputmodeText = false;
@@ -162,12 +164,12 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 				if (singleplayer)
 				{
 					
-					SingleplayerTick(p, &lastmovetime);
+					SingleplayerTick(&lastMoveTime);
 				}
 				else
 				{
 					
-					MultiplayerTick(p);
+					MultiplayerTick(&lastMoveTime);
 				}
 			}
 		}
@@ -175,7 +177,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 	return 0;
 }
 
-void SingleplayerTick(POINT p, int* lastMoveTime)
+void SingleplayerTick(int* lastMoveTime)
 {
 	/* Game loop */
 	if (menu.GetMenuState() != Game)
@@ -210,20 +212,28 @@ void SingleplayerTick(POINT p, int* lastMoveTime)
 	}
 }
 
-void MultiplayerTick(POINT p)
+void MultiplayerTick(int *lastNetTickTime)
 {
 	MenuStates menuState = menu.GetMenuState();
-	if (menuState != MultiplayerChoosingRoom && menuState != MultiplayerWaitingInRoom && menuState != MultiplayerWaitingStart && menuState != MultiplayerGame)
+	/*if (menuState != MultiplayerChoosingRoom && menuState != MultiplayerWaitingInRoom && menuState != MultiplayerWaitingStart && menuState != MultiplayerGame)
 	{
 		inmenu = true;
-	}
+	}*/
 	if (tempDir1 > 0 && tempDir1 < 5)
 	{
 		snake1dir = tempDir1;
 	}
-	networkEngine.NetworkTick((NetEngineInput)snake1dir);
+	if (menuState == MultiplayerGame || menuState == MultiplayerGameAsRoomCreator)
+	{
+		networkEngine.GameTick(snake1dir);
+	}
+	if (clock() - *lastNetTickTime >= 250)
+	{
+		*lastNetTickTime = clock();
+		networkEngine.Ping();
+	}
 	rend.RenderFrame(networkEngine.GetPhysicsForRenderer(), menu.GetButtonsVectorForRenderer(), false);
-	Sleep(50);
+	Sleep(16);
 }
 
 void SortSnakesByLenght(Menu *menu, GameLogic *game)
@@ -265,6 +275,7 @@ void SortSnakesByLenght(Menu *menu, GameLogic *game)
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+	std::wstring *input = NULL;
 	switch (uMsg)
 	{
 	case WM_DESTROY:
@@ -272,37 +283,55 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		return 0;
 		break;
 	case WM_KEYDOWN:
+		if (wParam == VK_ESCAPE)
+		{
+			menu.RegisterEvent(GoBack, 0, NULL, NULL, NULL, NULL);
+		}
 		if (keyboardinputmodeText)
 		{
-			/*           English alphabet                          Numbers 0-9            */
-			if ((wParam >= 0x41 && wParam <= 0x5a) || (wParam >= 0x30 && wParam <= 0x39))
+			if (menu.GetMenuState() == Multiplayer)
 			{
-				inputString.push_back((wchar_t)wParam);
+				input = &inputString;
 			}
-
-			/* Num pad numbers 0-9 */
-			if (wParam >= 0x60 && wParam <= 0x69)
+			if (menu.GetMenuState() == MainMenu)
 			{
-				inputString.push_back((wchar_t)(wParam - 0x30));
+				input = &nickname;
 			}
-
-			/* Backspace */
-			if (wParam == 0x08)
+			if (input != NULL)
 			{
-				if (inputString.length() > 0)
+				/*           English alphabet                          Numbers 0-9            */
+				if ((wParam >= 0x41 && wParam <= 0x5a) || (wParam >= 0x30 && wParam <= 0x39))
 				{
-					inputString.pop_back();
+					input->push_back((wchar_t)wParam);
+				}
+
+				/* Num pad numbers 0-9 */
+				if (wParam >= 0x60 && wParam <= 0x69)
+				{
+					input->push_back((wchar_t)(wParam - 0x30));
+				}
+
+				/* Backspace */
+				if (wParam == 0x08)
+				{
+					if (input->length() > 0)
+					{
+						input->pop_back();
+					}
+				}
+				if (wParam == VK_OEM_PERIOD)
+				{
+					input->push_back(L'.');
+				}
+				if (wParam == VK_SPACE)
+				{
+					input->push_back(L' ');
+				}
+				if (wParam == VK_DECIMAL)
+				{
+					input->push_back(L'.');
 				}
 			}
-			if (wParam == VK_OEM_PERIOD)
-			{
-				inputString.push_back(L'.');
-			}
-			if (wParam == VK_SPACE)
-			{
-				inputString.push_back(L' ');
-			}
-			menu.ChangeButtonText(Multiplayer, 1, const_cast<wchar_t*>(inputString.c_str()));
 		}
 		else
 		{

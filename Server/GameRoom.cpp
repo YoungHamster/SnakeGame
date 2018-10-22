@@ -119,4 +119,5 @@ int GameRoom::DisconnectPlayer(connection *player)
 			players[i] = NULL;
 		}
 	}
+	return 0;
 }

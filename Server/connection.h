@@ -12,7 +12,6 @@ struct connection
 	bool connected = false;
 	bool votedForStart = false;
 	bool compressPhysics = true;
-	GameRoom* gameRoom = NULL; // deprecated
 	short ownIdConnectionsArray;
 	short roomIdInRoomsArray;
 };

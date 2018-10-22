@@ -9,7 +9,8 @@ struct button
 	AABB ClickBox;
 	AABB EnlargedClickBox;
 	int Size;
-	wchar_t *Text;
+	std::wstring* changableText = NULL;
+	std::wstring constantText;
 	int UBID;
 	int AdditionalInfo;
 };

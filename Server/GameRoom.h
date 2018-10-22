@@ -33,7 +33,7 @@ public:
 	std::vector<SnakeBlock>& GetSnake(int SnakeID);
 	char GetPlayerDir(int playerID);
 	int DisconnectPlayer(connection *player);
-	int ReloadGame() { game.Init(64, 36, 5, 5, 5, 5); }
+	int ReloadGame() { game.Init(64, 36, 5, 5, 5, 5); return 0; }
 	
 
 	/*void o()

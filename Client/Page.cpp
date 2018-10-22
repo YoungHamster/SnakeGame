@@ -1,11 +1,5 @@
 #include "Page.h"
 
-bool Page::AddButton(button button)
-{
-	buttons.push_back(button);
-	return true;
-}
-
 //bool Page::AddButton(bool Clickable, bool Centered, SDL_Rect rect, wchar_t *Text, double Size)
 //{
 //	button button;
@@ -27,14 +21,15 @@ bool Page::AddButton(button button)
 //	return true;
 //}
 
-bool Page::AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text, int Size, Renderer* renderer, int UBID, int AdditionalInfo)
+bool Page::AddButton(bool Clickable, bool Centered, int x, int y, std::wstring* changableText, std::wstring constantText, int Size, Renderer* renderer, int UBID, int AdditionalInfo)
 {
 	button button;
 	button.AdditionalInfo = AdditionalInfo;
 	button.UBID = UBID;
 	button.Clickable = Clickable;
 	button.Centered = Centered;
-	button.Text = Text;
+	button.changableText = changableText;
+	button.constantText = constantText;
 	AABB box;
 	if (!Centered)
 	{
@@ -42,10 +37,24 @@ bool Page::AddButton(bool Clickable, bool Centered, int x, int y, wchar_t *Text,
 	}
 	else
 	{
-		box.min.x = renderer->GetRenderTargetSize().width / 2 - renderer->CountTextWidth(Text, Size) / 2;
+		if (changableText != NULL)
+		{
+			box.min.x = renderer->GetRenderTargetSize().width / 2 - renderer->CountTextWidth(changableText->c_str(), Size) / 2;
+		}
+		else
+		{
+			box.min.x = renderer->GetRenderTargetSize().width / 2 - renderer->CountTextWidth(constantText.c_str(), Size) / 2;
+		}
 	}
 	box.min.y = y;
-	box.max.x = box.min.x + renderer->CountTextWidth(Text, Size);
+	if (changableText != NULL)
+	{
+		box.max.x = box.min.x + renderer->CountTextWidth(changableText->c_str(), Size);
+	}
+	else
+	{
+		box.max.x = box.min.x + renderer->CountTextWidth(constantText.c_str(), Size);
+	}
 	box.max.y = box.min.y + 8 * Size;
 	button.Size = Size;
 	button.ClickBox = box;

@@ -42,6 +42,9 @@ public:
 	bool MoveSnake(char Direction, int SnakeID);
 	void KillSnake(int SnakeID);
 
+	/* Created for using in multiplayer */
+	void ChangeApplePostition(short minx, short miny);
+
 	int HandleAIForSnake(int SnakeID);
 	int CheckCollisionsForAI(int SnakeID);
 	void AStar(AABB start, AABB goal);

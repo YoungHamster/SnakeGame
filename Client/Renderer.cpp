@@ -387,26 +387,35 @@ void Renderer::DrawTextOnRend(const wchar_t* text, int Size, int minX, int minY)
 
 void Renderer::RenderButton(button button)
 {
+	const wchar_t* text;
+	if (button.changableText != NULL)
+	{
+		text = button.changableText->c_str();
+	}
+	else
+	{
+		text = button.constantText.c_str();
+	}
 	if (!button.Enlarged)
 	{
 		if (button.Centered)
 		{
-			DrawTextOnRend(button.Text, button.Size, (rendertarget->GetPixelSize().width / 2) - CountTextWidth(button.Text, button.Size) / 2, button.ClickBox.min.y);
+			DrawTextOnRend(text, button.Size, (rendertarget->GetPixelSize().width / 2) - CountTextWidth(text, button.Size) / 2, button.ClickBox.min.y);
 		}
 		else
 		{
-			DrawTextOnRend(button.Text, button.Size, button.ClickBox.min.x, button.ClickBox.min.y);
+			DrawTextOnRend(text, button.Size, button.ClickBox.min.x, button.ClickBox.min.y);
 		}
 	}
 	else
 	{
 		if (button.Centered)
 		{
-			DrawTextOnRend(button.Text, button.Size + 1, (rendertarget->GetPixelSize().width / 2) - CountTextWidth(button.Text, button.Size + 1) / 2, button.ClickBox.min.y);
+			DrawTextOnRend(text, button.Size + 1, (rendertarget->GetPixelSize().width / 2) - CountTextWidth(text, button.Size + 1) / 2, button.ClickBox.min.y);
 		}
 		else
 		{
-			DrawTextOnRend(button.Text, button.Size + 1, button.ClickBox.min.x, button.ClickBox.min.y);
+			DrawTextOnRend(text, button.Size + 1, button.ClickBox.min.x, button.ClickBox.min.y);
 		}
 	}
 }

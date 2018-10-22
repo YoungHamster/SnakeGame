@@ -12,7 +12,18 @@
 #include "GameLogic.h"
 #include "Console.h"
 
+#define NETWORK_PROFILING
+
 #define CREATE_NEW_ROOM_ON_SERVER 2147483647
+
+struct ServerInfo
+{
+	std::wstring serverName;
+	int numberOfConnectedPlayers;
+	int pingInMs;
+	std::vector<std::wstring> roomsNames;
+	std::vector<int> activeRoomsIDs;
+};
 
 enum NetStates
 {
@@ -70,6 +81,12 @@ union BytesToSnakeBlock
 	char bytes[sizeof(SnakeBlock)];
 };
 
+union ByteToBool
+{
+	bool boolean;
+	char byte;
+};
+
 class ClientNetworkEngine
 {
 private:
@@ -80,20 +97,24 @@ private:
 	int roomId;
 	bool matchRunning = false;
 	GameLogic game;
-	NetStates ConnectionState = DISCONNECTED;
+	NetStates connectionState = DISCONNECTED;
 	Console out;
+	ServerInfo currentServer;
+	short currentRoomID = -1;
 
 	bool SynchronizeGame();
-	NetStates GameTick(NetEngineInput input);
 public:
-	int* ConnectPart1(const char* ip, unsigned short port, int* numberOfRooms);
-	bool ConnectPart2(int playerChoose);
+	bool ConnectToServer(std::wstring *nickname, const char* ip, unsigned short port);
+	ServerInfo GetInfoAboutServer();
+	bool CreateNewRoom();
+	bool JoinExistingRoom(short roomID);
+	bool LeaveRoom();
 	bool VoteForStart();
-	std::vector<PhysicalObject>* SendDirGetPhysics(char dir);
-	void Disconnect();
+	int Ping();
+	NetStates GameTick(char dir);
+	bool StopMatch();
+	bool PauseMatch();
+	bool Disconnect();
 	static void ZeroBuff(char* firstByte, int sizeOfBuff);
-	//char[(36 + 3) * 64 + 1] SendDirGetCompressedPhysics(char dir);
-	char* SendDirGetCompressedPhysics(char dir);
-	NetStates NetworkTick(NetEngineInput input);
 	std::vector<PhysicalObject>& GetPhysicsForRenderer();
 };

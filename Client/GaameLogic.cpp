@@ -604,3 +604,11 @@ int GameLogic::HandleAIForSnake(int SnakeID)
 		return DOWN;
 	return UP;
 }
+
+void GameLogic::ChangeApplePostition(short minx, short miny)
+{
+	physics[apple.GetPhysicalBodyID()].borders.min.x = minx;
+	physics[apple.GetPhysicalBodyID()].borders.min.y = miny;
+	physics[apple.GetPhysicalBodyID()].borders.max.x = physics[apple.GetPhysicalBodyID()].borders.min.x + 1;
+	physics[apple.GetPhysicalBodyID()].borders.max.y = physics[apple.GetPhysicalBodyID()].borders.min.y + 1;
+}
