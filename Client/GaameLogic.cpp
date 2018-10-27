@@ -12,8 +12,8 @@ void GameLogic::Reset()
 bool GameLogic::Init(short gameFieldWidth, short gameFieldHeight, short snake1Length, short snake2Length, short snake3Length, short snake4Length)
 {
 	Reset();
-	GameFieldHeight = gameFieldHeight;
-	GameFieldWidth = gameFieldWidth;
+	this->gameFieldHeight = gameFieldHeight;
+	this->gameFieldWidth = gameFieldWidth;
 	physics.resize(5 + snake1Length + snake2Length + snake3Length + snake4Length);
 	PhysicalObject tempObj;
 	SnakeBlock tempBlock;
@@ -226,7 +226,6 @@ bool GameLogic::Init(short gameFieldWidth, short gameFieldHeight, short snake1Le
 	appleSpawnZone.max.y = gameFieldHeight - 2;
 
 	apple.Spawn(appleSpawnZone, &physics[apple.GetPhysicalBodyID()]);
-
 	return true;
 }
 
@@ -243,7 +242,7 @@ int GameLogic::OneTick(char snake1dir, char snake2dir, char snake3dir, char snak
 					if (physics[j].type == APPLE)
 					{
 						EnlargeSnake(1, i);
-						apple.Spawn(appleSpawnZone, &physics[apple.GetPhysicalBodyID()]);
+						SpawnApple();
 					}
 					else
 					{
@@ -285,7 +284,7 @@ int GameLogic::OneTick(char snake1dir, char snake2dir, char snake3dir, char snak
 	if (!snake1alive && !snake2alive && !snake3alive && !snake4alive)
 	{
 		Reset();
-		Init(GameFieldWidth, GameFieldHeight, 5, 5, 5, 5);
+		Init(gameFieldWidth, gameFieldHeight, 5, 5, 5, 5);
 		return 1;
 	}
 	//if (snake2alive)
@@ -611,4 +610,31 @@ void GameLogic::ChangeApplePostition(short minx, short miny)
 	physics[apple.GetPhysicalBodyID()].borders.min.y = miny;
 	physics[apple.GetPhysicalBodyID()].borders.max.x = physics[apple.GetPhysicalBodyID()].borders.min.x + 1;
 	physics[apple.GetPhysicalBodyID()].borders.max.y = physics[apple.GetPhysicalBodyID()].borders.min.y + 1;
+}
+
+void GameLogic::SpawnApple()
+{
+	AABB* possibleApplePositions = new AABB[(gameFieldWidth - 2) * (gameFieldHeight - 2)];
+	AABB possibleApplePosition;
+	int numberOfPossibleApplePositions = 0;
+	for (int i = 1; i < gameFieldWidth - 1; i++)
+	{
+		for (int j = 1; j < gameFieldHeight - 1; j++)
+		{
+			possibleApplePosition.min.x = i;
+			possibleApplePosition.min.y = j;
+			possibleApplePosition.max.x = i + 1;
+			possibleApplePosition.max.y = j + 1;
+			for (int k = 0; k < physics.size(); k++)
+			{
+				if (!NormalAABBvsAABB(possibleApplePosition, physics[k].borders) && physics[k].type != DEAD_SNAKE)
+				{
+					possibleApplePositions[numberOfPossibleApplePositions] = possibleApplePosition;
+					numberOfPossibleApplePositions++;
+					k = physics.size();
+				}
+			}
+		}
+	}
+	physics[apple.GetPhysicalBodyID()].borders = possibleApplePositions[randomNumber(0, numberOfPossibleApplePositions - 1)];
 }

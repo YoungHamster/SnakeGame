@@ -11,6 +11,7 @@ int SendTickInformation(char* buff, int buffSize, GameRoom *firstRoom, connectio
 int SynchronizeGame(char* buff, int buffSize, GameRoom *firstRoom, connection *player);
 int StopMatch(char* buff, int buffSize, GameRoom *firstRoom, connection *player);
 int PauseMatch(char* buff, int buffSize, GameRoom *firstRoom, connection *player);
+int UnpauseMatch(char* buff, int buffSize, GameRoom *firstRoom, connection *player);
 int Disconnect(char* buff, int buffSize, GameRoom *firstRoom, connection *player);
 
 bool NetworkEngine::Init()
@@ -41,7 +42,8 @@ bool NetworkEngine::Init()
 	functions[8] = SynchronizeGame;
 	functions[9] = StopMatch;
 	functions[10] = PauseMatch;
-	functions[11] = Disconnect;
+	functions[11] = UnpauseMatch;
+	functions[12] = Disconnect;
 	return true;
 }
 
@@ -54,8 +56,9 @@ void NetworkEngine::AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, conn
 		while (newPlayer->connected)
 		{
 			newPlayer = firstConnection;
-			for (int i = 0; i < 10000; i++, newPlayer++)
+			for (int i = 0; i < 10000; i++)
 			{
+				newPlayer++;
 				if (!newPlayer->connected)
 				{
 					i = 10000;
@@ -82,7 +85,7 @@ void NetworkEngine::AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, conn
 
 void NetworkEngine::AsyncUserConnection(GameRoom *firstRoom, connection *connection)
 {
-	char buff[1024 * 20];
+	char buff[1024];
 	while (serverrunning && connection->connected)
 	{
 		if (recv(connection->connectSock, buff, sizeof(buff), NULL) <= 0)
@@ -90,37 +93,9 @@ void NetworkEngine::AsyncUserConnection(GameRoom *firstRoom, connection *connect
 			closesocket(connection->connectSock);
 			return;
 		}
-		functions[buff[0]](buff, sizeof(buff), firstRoom, connection);
-	}
-}
-
-GameRoom* NetworkEngine::NewRoom(GameRoom newroom, GameRoom* firstRoom)
-{
-	for (int i = 0; i < 1000; i++, firstRoom++)
-	{
-		if (!firstRoom->roomActive)
+		if (buff[0] < NUMBER_OF_PACKETS && buff[0] >= 0)
 		{
-			*firstRoom = newroom;
-			return firstRoom;
-		}
-	}
-	return NULL;
-}
-
-void NetworkEngine::AsyncRoomThr(GameRoom *room)
-{
-	int lastTickTime = 0;
-	//double GameSpeed = 1.0;
-	while (serverrunning && room->AnyConnectedPlayers() && room->roomActive)
-	{
-		if (room->GameSpeed > 0)
-		{
-			Sleep(100 / (DWORD)room->GameSpeed / 2);
-		}
-		if (clock() - lastTickTime >= 75 / room->GameSpeed && room->matchRunning)
-		{
-			room->OneTick();
-			lastTickTime = clock();
+			functions[buff[0]](buff, sizeof(buff), firstRoom, connection);
 		}
 	}
 }
@@ -177,15 +152,6 @@ void NetworkEngine::ZeroBuff(char *firstByte, int sizeOfBuff)
 	}
 }
 
-bool AnyActiveRooms(GameRoom *firstRoom)
-{
-	for (int i = 0; i < NUMBER_OF_ROOMS; i++)
-	{
-		if (firstRoom[i].roomActive) return true;
-	}
-	return false;
-}
-
 unsigned int randNum()
 {
 	std::random_device rd;
@@ -196,41 +162,40 @@ unsigned int randNum()
 
 int NetworkEngine::Handshake(GameRoom *firstRoom, connection *player)
 {
-	int nicknamelenght = 0;
-	char buff[1500];
-	//ZeroBuff(&buff[0], 1500);
-	for (int i = 0; i < sizeof(buff); i++)
-	{
-		buff[i] = '\0';
-	}
-
+	int nicknameLenght = 0;
+	/* Maximum size of packet in this function, 64 wchars + 1 header byte */
+	char buff[129];
 	recv(player->connectSock, buff, sizeof(buff), NULL);
-	if (buff[0] > 129)
+	if (buff[0] > 64)
 	{
 		std::cout << "Error while handshaking with player, player sended wrong packet!" << std::endl;
 		closesocket(player->connectSock);
 		player->connected = false;
 		return -1;
 	}
-	nicknamelenght = buff[0];
-	wchar_t* nickname = new wchar_t[nicknamelenght / 2];
+	nicknameLenght = (int)buff[0];
+	wchar_t* nickname = new wchar_t[nicknameLenght];
 	WcharToBytes nicknameConv;
-	for (int i = 0; i < nicknamelenght / 2; i++)
+	for (int i = 0; i < nicknameLenght; i++)
 	{
 		nicknameConv.bytes[0] = buff[i + 1];
 		nicknameConv.bytes[1] = buff[i + 2];
 		nickname[i] = nicknameConv.wchar;
 	}
-
-	/* Respone */
-	int bufflenght = 9;
+	player->nicknameLenght = nicknameLenght;
 	player->nickname = nickname;
+	/* Respone */
 	player->uuid |= randNum();
 	player->uuid <<= 32;
 	player->uuid |= randNum();
 
 	/* Write information about user in console */
-	std::cout << "New player: UUID-" << player->uuid; std::wcout << " , nickname-" << player->nickname << std::endl;
+	std::cout << "New player: UUID-" << player->uuid << " , nickname-";
+	for (int i = 0; i < player->nicknameLenght; i++)
+	{
+		std::wcout << player->nickname[i];
+	}
+	std::cout << std::endl;
 
 	buff[0] = '\x01';
 	ULLToBytes uuidConv;
@@ -240,10 +205,27 @@ int NetworkEngine::Handshake(GameRoom *firstRoom, connection *player)
 
 		buff[i + 1] = uuidConv.bytes[i];
 	}
-	send(player->connectSock, buff, bufflenght, NULL);
+	send(player->connectSock, buff, 9, NULL);
 	std::thread newUserThread(AsyncUserConnection, firstRoom, player);
 	newUserThread.detach();
 	return 0;
+}
+
+void AsyncRoomThr(GameRoom *room)
+{
+	int lastTickTime = 0;
+	//double GameSpeed = 1.0;
+	room->GameSpeed = 0.5;
+	while (serverrunning && room->AnyConnectedPlayers() && room->roomActive)
+	{
+		Sleep(75 / room->GameSpeed / 2);
+		if (clock() - lastTickTime >= 75 / room->GameSpeed && room->matchRunning)
+		{
+			room->OneTick();
+			lastTickTime = clock();
+		}
+	}
+	std::cout << "Room closed" << std::endl;
 }
 
 int SendMainInformationAboutServer(char *buff, int buffSize, GameRoom *firstRoom, connection *player)
@@ -252,7 +234,7 @@ int SendMainInformationAboutServer(char *buff, int buffSize, GameRoom *firstRoom
 	{
 		return -1;
 	}
-	char infobuff[100];
+	char infobuff[4000];
 	infobuff[0] = 0x00;
 	return 0;
 }
@@ -264,7 +246,8 @@ int SendActiveRoomsIds(char *buff, int buffSize, GameRoom *firstRoom, connection
 		return -1;
 	}
 	GameRoom *room = firstRoom;
-	char activeRoomsIds[4000];
+	char activeRoomsIds[4001];
+	activeRoomsIds[0] = 0x01;
 	int numberOfActiveRooms = 0;
 	IntToBytes idsConv;
 	for (int i = 0; i < NUMBER_OF_ROOMS; i++)
@@ -274,12 +257,12 @@ int SendActiveRoomsIds(char *buff, int buffSize, GameRoom *firstRoom, connection
 			idsConv.integer = i;
 			for (int j = 0; j < sizeof(int); j++)
 			{
-				activeRoomsIds[i * sizeof(int) + j] = idsConv.bytes[j];
+				activeRoomsIds[1 + numberOfActiveRooms * sizeof(int) + j] = idsConv.bytes[j];
 			}
 			numberOfActiveRooms++;
 		}
 	}
-	send(player->connectSock, activeRoomsIds, sizeof(int) * numberOfActiveRooms, NULL);
+	send(player->connectSock, activeRoomsIds, numberOfActiveRooms * sizeof(int) + 1, NULL);
 	return 0;
 }
 
@@ -302,6 +285,8 @@ int CreateNewRoom(char *buff, int buffSize, GameRoom *firstRoom, connection *pla
 			buff[1] = conv.bytes[0];
 			buff[2] = conv.bytes[1];
 			send(player->connectSock, buff, 3, NULL);
+			std::thread newRoomThread(AsyncRoomThr, &firstRoom[i]);
+			newRoomThread.detach();
 			return 0;
 		}
 	}
@@ -323,14 +308,17 @@ int JoinExistingRoom(char *buff, int buffSize, GameRoom *firstRoom, connection *
 	}
 	if (!firstRoom[roomIDconv.integer].roomActive)
 	{
+		std::cout << "Player tryed to connect to unactive room #" << roomIDconv.integer << std::endl;
 		send(player->connectSock, "\xff", 1, NULL);
 		return -3;
 	}
 	if (firstRoom[roomIDconv.integer].ConnectPlayer(player) == -1)
 	{
+		std::cout << "Player tryed to connect to full room" << std::endl;
 		send(player->connectSock, "\xff", 1, NULL);
 		return -4;
 	}
+	
 	send(player->connectSock, "\x03", 1, NULL);
 	return 0;
 }
@@ -354,12 +342,14 @@ int VoteForStart(char* buff, int buffSize, GameRoom *firstRoom, connection *play
 	{
 		return -1;
 	}
-	if (firstRoom[player->roomIdInRoomsArray].matchRunning)
-	{
-		return -2;
-	}
 	char respone[2];
 	respone[0] = 0x05;
+	if (firstRoom[player->roomIdInRoomsArray].matchRunning)
+	{
+		respone[1] = true;
+		send(player->connectSock, respone, 2, NULL);
+		return -2;
+	}
 	player->votedForStart = true;
 	for (int i = 0; i < 4; i++)
 	{
@@ -376,6 +366,7 @@ int VoteForStart(char* buff, int buffSize, GameRoom *firstRoom, connection *play
 	firstRoom[player->roomIdInRoomsArray].matchRunning = true;
 	respone[1] = true;
 	send(player->connectSock, respone, 2, NULL);
+	player->votedForStart = false;
 	return 0;
 }
 
@@ -403,35 +394,48 @@ int SendTickInformation(char* buff, int buffSize, GameRoom *firstRoom, connectio
 	{
 		return -1;
 	}
-	// 2 BYTES-HEADER, 4 BYTES-SNAKESDIRECTIONS, 4 BYTES-2 SHORTS(APPLE AABB.min), 8 BYTES - 4 SHORTS(LENGHTS OF SNAKES)
-	char oneTickPacket[2 + 4 + 4 + 8];
-	oneTickPacket[0] = 0x07;
-	oneTickPacket[1] = 0x01;
-	oneTickPacket[2] = firstRoom[player->roomIdInRoomsArray].players[0]->gameDir;
-	oneTickPacket[3] = firstRoom[player->roomIdInRoomsArray].players[1]->gameDir;
-	oneTickPacket[4] = firstRoom[player->roomIdInRoomsArray].players[2]->gameDir;
-	oneTickPacket[5] = firstRoom[player->roomIdInRoomsArray].players[3]->gameDir;
-	ShortToBytes converter;
-	for (int i = 0; i < firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer().size(); i++)
+	player->gameDir = buff[1];
+	if (!player->recvedLastTickInfo)
 	{
-		if (firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer()[i].type == APPLE)
+		player->gameDir = buff[1];
+		// 2 BYTES-HEADER, 4 BYTES-SNAKESDIRECTIONS, 4 BYTES-2 SHORTS(APPLE AABB.min), 8 BYTES - 4 SHORTS(LENGHTS OF SNAKES)
+		char oneTickPacket[2 + 4 + 4 + 8];
+		oneTickPacket[0] = 0x07;
+		oneTickPacket[1] = 0x01;
+		oneTickPacket[2] = firstRoom[player->roomIdInRoomsArray].GetPlayerDir(0);
+		oneTickPacket[3] = firstRoom[player->roomIdInRoomsArray].GetPlayerDir(1);
+		oneTickPacket[4] = firstRoom[player->roomIdInRoomsArray].GetPlayerDir(2);
+		oneTickPacket[5] = firstRoom[player->roomIdInRoomsArray].GetPlayerDir(3);
+		ShortToBytes converter;
+		for (int i = 0; i < firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer().size(); i++)
 		{
-			converter.integer = firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer()[i].borders.min.x;
-			oneTickPacket[6] = converter.bytes[0];
-			oneTickPacket[7] = converter.bytes[1];
-			converter.integer = firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer()[i].borders.min.y;
-			oneTickPacket[8] = converter.bytes[0];
-			oneTickPacket[9] = converter.bytes[1];
-			i = (int)firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer().size();
+			if (firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer()[i].type == APPLE)
+			{
+				converter.integer = firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer()[i].borders.min.x;
+				oneTickPacket[6] = converter.bytes[0];
+				oneTickPacket[7] = converter.bytes[1];
+				converter.integer = firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer()[i].borders.min.y;
+				oneTickPacket[8] = converter.bytes[0];
+				oneTickPacket[9] = converter.bytes[1];
+				i = (int)firstRoom[player->roomIdInRoomsArray].GetPhysicsForPlayer().size();
+			}
 		}
+		for (int i = 0; i < 4; i++)
+		{
+			converter.integer = firstRoom[player->roomIdInRoomsArray].GetSnakeLenght(i);
+			oneTickPacket[10 + i * 2] = converter.bytes[0];
+			oneTickPacket[11 + i * 2] = converter.bytes[1];
+		}
+		player->recvedLastTickInfo = true;
+		return send(player->connectSock, oneTickPacket, sizeof(oneTickPacket), NULL);
 	}
-	for (int i = 0; i < 4; i++)
+	else
 	{
-		converter.integer = firstRoom[player->roomIdInRoomsArray].GetSnakeLenght(i);
-		oneTickPacket[10 + i * 2] = converter.bytes[0];
-		oneTickPacket[11 + i * 2] = converter.bytes[1];
+		char packet[2];
+		packet[0] = 0x07;
+		packet[1] = 0x02;
+		return send(player->connectSock, packet, sizeof(packet), NULL);
 	}
-	return send(player->connectSock, oneTickPacket, sizeof(oneTickPacket), NULL);
 }
 
 int SynchronizeGame(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
@@ -541,15 +545,28 @@ int PauseMatch(char* buff, int buffSize, GameRoom *firstRoom, connection *player
 	return 0;
 }
 
-int Disconnect(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
+int UnpauseMatch(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
 {
 	if (buff[0] != 0x0B)
 	{
 		return -1;
 	}
+	char respone;
+	respone = 0x0B;
+	firstRoom[player->roomIdInRoomsArray].matchRunning = true;
+	send(player->connectSock, &respone, 1, NULL);
+	return 0;
+}
+
+int Disconnect(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
+{
+	if (buff[0] != 0x0C)
+	{
+		return -1;
+	}
 	firstRoom[player->roomIdInRoomsArray].DisconnectPlayer(player);
 	player->connected = false;
-	//player->gameRoom = NULL;
 	closesocket(player->connectSock);
+	std::cout << "Player disconnected" << std::endl;
 	return 0;
 }

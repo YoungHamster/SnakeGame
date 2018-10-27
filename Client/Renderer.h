@@ -22,8 +22,8 @@
 #define CREATION_BRUSH_ERROR 2
 
 #define BITMAPSNUMBER 39 + 41
-#define SCREENHEIGTH 720
-#define SCREENWIDTH 1280
+#define SCREENHEIGTH 1080
+#define SCREENWIDTH 1920
 #define GAMEFIELDHEIGTH (SCREENHEIGTH / 30)
 #define GAMEFIELDWIDTH (SCREENWIDTH / 30)
 
@@ -69,6 +69,8 @@ public:
 	D2D1_SIZE_U GetRenderTargetSize();
 
 	int GetLastRendererError();
+
+	void SetGameFieldSize(int width, int heigth) { GameFieldWidth = width; GameFieldHeigth = heigth; }
 
 };
 

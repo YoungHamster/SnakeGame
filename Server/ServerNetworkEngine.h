@@ -13,6 +13,8 @@
 #include "connection.h"
 
 #define NUMBER_OF_ROOMS 1000
+#define NUMBER_OF_PLAYERS 4000
+#define NUMBER_OF_PACKETS 13
 
 static bool serverrunning = true;
 
@@ -52,6 +54,12 @@ union DoubleToBytes
 	char bytes[sizeof(double)]; // 8 bytes
 };
 
+union FloatToBytes
+{
+	float number;
+	char bytes[sizeof(float)]; // 4 bytes
+};
+
 union SnakeBlockToBytes
 {
 	SnakeBlock block;
@@ -59,10 +67,10 @@ union SnakeBlockToBytes
 };
 
 static GameRoom rooms[NUMBER_OF_ROOMS];
-static connection players[4000];
+static connection players[NUMBER_OF_PLAYERS];
 
 /* static array of pointers on functions for network final state machine */
-static int(*functions[12])(char* buff, int buffSize, GameRoom *room, connection *player);
+static int(*functions[NUMBER_OF_PACKETS])(char* buff, int buffSize, GameRoom *room, connection *player);
 
 class NetworkEngine
 {
@@ -77,11 +85,8 @@ public:
 	bool Init();
 	static void AcceptingThread(SOCKET listenSock, SOCKADDR_IN address, connection* firstConnection, GameRoom *firstRoom);
 	static int Handshake(GameRoom *firstRoom, connection *player);
-	static GameRoom* NewRoom(GameRoom newroom, GameRoom* firstRoom);
-	static bool AnyActiveRooms(GameRoom *firstRoom);
 	static void AsyncRoomThr(GameRoom *room);
 	static void AsyncUserConnection(GameRoom *firstRoom, connection *player);
-	static void SendPhysicsToClient(GameRoom *room, connection *client);
 	static const char* WSAErrorToString();
 	//static unsigned int randNum();
 	static void ZeroBuff(char *firstByte, int sizeOfBuff);

@@ -228,6 +228,10 @@ bool GameLogic::Init(short gameFieldWidth, short gameFieldHeight, short snake1Le
 	appleSpawnZone.max.y = gameFieldHeight - 2;
 
 	apple.Spawn(appleSpawnZone, &physics[apple.GetPhysicalBodyID()]);
+	playerDirs[0] = LEFT;
+	playerDirs[1] = LEFT;
+	playerDirs[2] = LEFT;
+	playerDirs[3] = LEFT;
 
 	return true;
 }
@@ -261,30 +265,54 @@ int GameLogic::OneTick(char snake1dir, char snake2dir, char snake3dir, char snak
 	if (snake1alive)
 	{
 		if (snake1dir != 0)
+		{
 			MoveSnake(snake1dir, 0);
+			playerDirs[0] = snake1dir;
+		}
 		else
-			MoveSnake(HandleAIForSnake(0), 0);
+		{
+			playerDirs[0] = HandleAIForSnake(0);
+			MoveSnake(playerDirs[0], 0);
+		}
 	}
 	if (snake2alive)
 	{
 		if (snake2dir != 0)
+		{
 			MoveSnake(snake2dir, 1);
+			playerDirs[1] = snake2dir;
+		}
 		else
-			MoveSnake(HandleAIForSnake(1), 1);
+		{
+			playerDirs[1] = HandleAIForSnake(1);
+			MoveSnake(playerDirs[1], 1);
+		}
 	}
 	if (snake3alive)
 	{
 		if (snake3dir != 0)
+		{
 			MoveSnake(snake3dir, 2);
+			playerDirs[2] = snake3dir;
+		}
 		else
-			MoveSnake(HandleAIForSnake(2), 2);
+		{
+			playerDirs[2] = HandleAIForSnake(2);
+			MoveSnake(playerDirs[2], 2);
+		}
 	}
 	if (snake4alive)
 	{
 		if (snake4dir != 0)
+		{
 			MoveSnake(snake4dir, 3);
+			playerDirs[3] = snake4dir;
+		}
 		else
-			MoveSnake(HandleAIForSnake(3), 3);
+		{
+			playerDirs[3] = HandleAIForSnake(3);
+			MoveSnake(playerDirs[3], 3);
+		}
 	}
 	*currentlyUsingPDs = false;
 	if (!snake1alive && !snake2alive && !snake3alive && !snake4alive)
@@ -517,27 +545,29 @@ void GameLogic::KillSnake(short SnakeID)
 
 void GameLogic::SpawnApple()
 {
-	std::vector<AABB> possibleApplePositions;
+	AABB* possibleApplePositions = new AABB[(gameFieldWidth - 2) * (gameFieldHeight - 2)];
 	AABB possibleApplePosition;
-	for (int i = 0; i < gameFieldWidth; i++)
+	int numberOfPossibleApplePositions = 0;
+	for (int i = 1; i < gameFieldWidth - 1; i++)
 	{
-		for (int j = 0; j < gameFieldHeight; j++)
+		for (int j = 1; j < gameFieldHeight - 1; j++)
 		{
 			possibleApplePosition.min.x = i;
 			possibleApplePosition.min.y = j;
 			possibleApplePosition.max.x = i + 1;
 			possibleApplePosition.max.y = j + 1;
-			possibleApplePositions.push_back(possibleApplePosition);
 			for (int k = 0; k < physics.size(); k++)
 			{
-				if (AABBvsAABB(possibleApplePosition, physics[k].borders) && physics[k].type != DEAD_SNAKE)
+				if (!NormalAABBvsAABB(possibleApplePosition, physics[k].borders) && physics[k].type != DEAD_SNAKE)
 				{
-					possibleApplePositions.pop_back();
+					possibleApplePositions[numberOfPossibleApplePositions] = possibleApplePosition;
+					numberOfPossibleApplePositions++;
+					k = physics.size();
 				}
 			}
 		}
 	}
-	physics[apple.GetPhysicalBodyID()].borders = possibleApplePositions[randomNumber(0, possibleApplePositions.size())];
+	physics[apple.GetPhysicalBodyID()].borders = possibleApplePositions[randomNumber(0, numberOfPossibleApplePositions - 1)];
 }
 
 /* Once i will write this function and rewrite renderer, but not now */

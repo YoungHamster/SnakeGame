@@ -16,6 +16,22 @@
 
 #define CREATE_NEW_ROOM_ON_SERVER 2147483647
 
+struct GameState
+{
+	int tickNumber;
+	std::vector<PhysicalObject> physics;
+	std::vector<SnakeBlock> snakes[4];
+};
+
+struct ServerRoomInfo
+{
+	float gameSpeed;
+	int ID;
+	std::wstring roomName;
+	char numberOfPlayers;
+	std::vector<std::wstring> nicknamesOfPlayers;
+};
+
 struct ServerInfo
 {
 	std::wstring serverName;
@@ -23,6 +39,7 @@ struct ServerInfo
 	int pingInMs;
 	std::vector<std::wstring> roomsNames;
 	std::vector<int> activeRoomsIDs;
+	std::vector<ServerRoomInfo> activeRooms;
 };
 
 enum NetStates
@@ -97,10 +114,11 @@ private:
 	int roomId;
 	bool matchRunning = false;
 	GameLogic game;
-	NetStates connectionState = DISCONNECTED;
 	Console out;
 	ServerInfo currentServer;
 	short currentRoomID = -1;
+
+	GameState* statesBuffer;
 
 	bool SynchronizeGame();
 public:
@@ -111,9 +129,10 @@ public:
 	bool LeaveRoom();
 	bool VoteForStart();
 	int Ping();
-	NetStates GameTick(char dir);
+	int GameTick(char dir);
 	bool StopMatch();
 	bool PauseMatch();
+	bool UnpauseMatch();
 	bool Disconnect();
 	static void ZeroBuff(char* firstByte, int sizeOfBuff);
 	std::vector<PhysicalObject>& GetPhysicsForRenderer();

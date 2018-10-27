@@ -143,21 +143,16 @@ void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, std::vector<but
 
 	int renderWidth = this->rendertarget->GetPixelSize().width;
 	int renderHeigth = this->rendertarget->GetPixelSize().height;
-	int xFactor = renderWidth / GameFieldWidth;
-	int yFactor = renderHeigth / GameFieldHeigth;
+	float xFactor = renderWidth / GameFieldWidth;
+	float yFactor = renderHeigth / GameFieldHeigth;
 	BeginDraw();
 	ClearScreen(backgroundR, backgroundG, backgroundB);
 
-	//SDL_Rect rect;
 	RECT rect;
 	for (int i = 0; i < physics.size(); i++)
 	{
 		if (physics[i].type != DEAD_SNAKE && physics[i].type < 40 && physics[i].type > 0)
 		{
-			/*rect.x = physics[i].borders.min.x * xFactor;
-			rect.y = renderHeigth - physics[i].borders.max.y * yFactor;
-			rect.w = (physics[i].borders.max.x - physics[i].borders.min.x) * xFactor;
-			rect.h = (physics[i].borders.max.y - physics[i].borders.min.y) * yFactor;*/
 			rect.left = physics[i].borders.min.x * xFactor;
 			rect.bottom = renderHeigth - physics[i].borders.min.y * yFactor;
 			rect.right = physics[i].borders.max.x * xFactor;
@@ -172,79 +167,6 @@ void Renderer::RenderFrame(std::vector<PhysicalObject>& physics, std::vector<but
 	}
 	EndDraw();
 }
-
-//void Renderer::RenderFrame(char compressedPhysics[GAMEFIELDHEIGTH * GAMEFIELDWIDTH], std::vector<button>& buttons)
-//{
-//	float backgroundR = 0.4f;
-//	float backgroundG = 0.5f;
-//	float backgroundB = 0.4f;
-//	float opacity = 0.7f;
-//	int renderWidth = this->rendertarget->GetPixelSize().width;
-//	int renderHeigth = this->rendertarget->GetPixelSize().height;
-//	int xFactor = renderWidth / GAMEFIELDWIDTH;
-//	int yFactor = renderHeigth / GAMEFIELDHEIGTH;
-//	BeginDraw();
-//	ClearScreen(backgroundR, backgroundG, backgroundB);
-//
-//	SDL_Rect rect;
-//	rect.w = xFactor;
-//	rect.h = yFactor;
-//	for (int i = 0; i < GAMEFIELDHEIGTH + 3 + 3; i++)
-//	{
-//		for (int j = 0; j < GAMEFIELDWIDTH + 2; j++)
-//		{
-//			rect.x = (j - 1) * xFactor;
-//			rect.y = renderHeigth - (i - 1) * yFactor;
-//			if (compressedPhysics[i * (GAMEFIELDWIDTH + 2) + j] != 0 && compressedPhysics[i * 66 + j] > 0 && compressedPhysics[i * 66 + j] < 77)
-//			{
-//				DrawBitmap(bitmaps[(compressedPhysics[i * (GAMEFIELDWIDTH + 2) + j]) - 1], &rect, NULL, opacity);
-//			}
-//		}
-//	}
-//	for (int i = 0; i < buttons.size(); i++)
-//	{
-//		RenderButton(buttons[i]);
-//	}
-//	EndDraw();
-//}
-
-//void Renderer::RenderFrame(char* compressedPhysics, std::vector<button>& buttons, int height, int width)
-//{
-//	float backgroundR = 0.4f;
-//	float backgroundG = 0.5f;
-//	float backgroundB = 0.4f;
-//	float opacity = 0.7f;
-//	int renderWidth = this->rendertarget->GetPixelSize().width;
-//	int renderHeigth = this->rendertarget->GetPixelSize().height;
-//	int xFactor = renderWidth / width;
-//	int yFactor = renderHeigth / height;
-//	BeginDraw();
-//	ClearScreen(backgroundR, backgroundG, backgroundB);
-//
-//	//SDL_Rect rect;
-//	RECT rect;
-//	
-//	rect.w = xFactor;
-//	rect.h = yFactor;
-//	for (int i = 0; i < height; i++)
-//	{
-//		for (int j = 0; j < width; j++)
-//		{
-//			rect.x = (j-1)
-//			rect.x = (j - 1) * xFactor;
-//			rect.y = renderHeigth - (i - 1) * yFactor;
-//			if (compressedPhysics[i * width + j] != 0 && compressedPhysics[i * width + j] > 0 && compressedPhysics[i * width + j] < 77)
-//			{
-//				DrawBitmap(bitmaps[(compressedPhysics[i * width + j]) - 1], &rect, NULL, opacity);
-//			}
-//		}
-//	}
-//	for (int i = 0; i < buttons.size(); i++)
-//	{
-//		RenderButton(buttons[i]);
-//	}
-//	EndDraw();
-//}
 
 void Renderer::DrawBitmap(ID2D1Bitmap* bmp, RECT* rect, RECT* srcrect, float opacity)
 {

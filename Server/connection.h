@@ -7,8 +7,9 @@ struct connection
 	SOCKET connectSock;
 	unsigned long long uuid; // deprecated
 	wchar_t* nickname;
-	char gameDir = 0;
-	bool recvedPhysics = false;
+	short nicknameLenght;
+	char gameDir = LEFT;
+	bool recvedLastTickInfo = false;
 	bool connected = false;
 	bool votedForStart = false;
 	bool compressPhysics = true;

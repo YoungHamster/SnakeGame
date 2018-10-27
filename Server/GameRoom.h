@@ -16,12 +16,11 @@ private:
 public:
 	bool matchRunning = false;
 	bool roomActive = false;
-	int URID;
 	wchar_t* title = const_cast<wchar_t*>(L"New room");
 
 	bool currentlyUsingPDs = false;
 	connection* players[4];
-	double GameSpeed = 1.0;
+	float GameSpeed = 1.0;
 
 	void Init(connection *roomcreator);
 	int ConnectPlayer(connection *player);
@@ -34,6 +33,8 @@ public:
 	char GetPlayerDir(int playerID);
 	int DisconnectPlayer(connection *player);
 	int ReloadGame() { game.Init(64, 36, 5, 5, 5, 5); return 0; }
+
+	int GetNumberOfPlayers();
 	
 
 	/*void o()

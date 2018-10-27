@@ -25,7 +25,7 @@ ClientNetworkEngine networkEngine;
 bool inmenu = true;
 bool gamerunning = true;
 static bool keyboardinputmodeText = true;
-std::wstring inputString;
+std::wstring inputString = L"127.0.0.1";
 std::wstring nickname = L"PLAYER";
 
 bool singleplayer = true;
@@ -43,7 +43,7 @@ int Snake1Length = 5;
 int Snake2Length = 5;
 int Snake3Length = 5;
 int Snake4Length = 5;
-static float GameSpeed = 1;
+static float GameSpeed = 50;
 short GameFieldWidth = GAMEFIELDWIDTH;
 short GameFieldHeight = GAMEFIELDHEIGTH;
 
@@ -124,6 +124,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR cmd, in
 			if (inmenu)
 			{
 				Sleep(33);
+				tempDir1 = -1;
+				tempDir1 = -1;
+
+				rend.SetGameFieldSize(GAMEFIELDWIDTH, GAMEFIELDHEIGTH);
 				if (clock() - lastMoveTime >= 75 / GameSpeed)
 				{
 					game.OneTick(0, 0, 0, 0);
@@ -215,25 +219,32 @@ void SingleplayerTick(int* lastMoveTime)
 void MultiplayerTick(int *lastNetTickTime)
 {
 	MenuStates menuState = menu.GetMenuState();
-	/*if (menuState != MultiplayerChoosingRoom && menuState != MultiplayerWaitingInRoom && menuState != MultiplayerWaitingStart && menuState != MultiplayerGame)
+	if (menuState != MultiplayerChoosingRoom && menuState != MultiplayerWaitingInRoom && menuState != MultiplayerWaitingInRoomAsCreator && menuState != MultiplayerWaitingStart && menuState != MultiplayerWaitingStartAsCreator && menuState != MultiplayerGame && menuState != MultiplayerGameAsRoomCreator)
 	{
 		inmenu = true;
-	}*/
+	}
 	if (tempDir1 > 0 && tempDir1 < 5)
 	{
 		snake1dir = tempDir1;
 	}
-	if (menuState == MultiplayerGame || menuState == MultiplayerGameAsRoomCreator)
+	if (clock() - *lastNetTickTime >= 16)
 	{
-		networkEngine.GameTick(snake1dir);
-	}
-	if (clock() - *lastNetTickTime >= 250)
-	{
+		if (menuState == MultiplayerWaitingStart || menuState == MultiplayerWaitingStartAsCreator)
+		{
+			if (networkEngine.VoteForStart())
+			{
+				menu.RegisterEvent(MultiplayerMatchStart, 0, NULL, NULL, NULL, NULL, NULL);
+			}
+		}
+		if (menuState == MultiplayerGame || menuState == MultiplayerGameAsRoomCreator)
+		{
+			networkEngine.GameTick((char)snake1dir);
+		}
 		*lastNetTickTime = clock();
-		networkEngine.Ping();
 	}
-	rend.RenderFrame(networkEngine.GetPhysicsForRenderer(), menu.GetButtonsVectorForRenderer(), false);
-	Sleep(16);
+	rend.SetGameFieldSize(64, 36);
+	rend.RenderFrame(networkEngine.GetPhysicsForRenderer(), menu.GetButtonsVectorForRenderer(), inmenu);
+	Sleep(5);
 }
 
 void SortSnakesByLenght(Menu *menu, GameLogic *game)
@@ -285,7 +296,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	case WM_KEYDOWN:
 		if (wParam == VK_ESCAPE)
 		{
-			menu.RegisterEvent(GoBack, 0, NULL, NULL, NULL, NULL);
+			menu.RegisterEvent(GoBack, 0, NULL, NULL, NULL, NULL, NULL);
 		}
 		if (keyboardinputmodeText)
 		{

@@ -4,7 +4,6 @@ void GameRoom::Init(connection *roomCreator)
 {
 	players[0] = roomCreator;
 	roomActive = true;
-	URID = randomNumber(-2000000000, 2000000000);
 	title = players[0]->nickname;
 	game.Init(64, 36, 5, 5, 5, 5);
 }
@@ -13,7 +12,17 @@ int GameRoom::ConnectPlayer(connection *player)
 {
 	for (int i = 0; i < 4; i++)
 	{
-		if (players[i] == NULL ? true : !players[i]->connected)
+		if (players[i] != NULL)
+		{
+			if (!players[i]->connected)
+			{
+				players[i] = NULL;
+			}
+		}
+	}
+	for (int i = 0; i < 4; i++)
+	{
+		if (players[i] == NULL)
 		{
 			players[i] = player;
 			return i;
@@ -24,7 +33,6 @@ int GameRoom::ConnectPlayer(connection *player)
 
 void GameRoom::OneTick()
 {
-	matchRunning = true;
 	for (int i = 0; i < 4; i++)
 	{
 		if (players[i] != NULL)
@@ -40,8 +48,8 @@ void GameRoom::OneTick()
 		roomActive = false;
 		return;
 	}
-	if ((players[0] == NULL ? true : players[0]->connected) && (players[1] == NULL ? true : players[1]->connected) &&
-		(players[2] == NULL ? true : players[2]->connected) && (players[3] == NULL ? true : players[3]->connected))
+	if ((players[0] == NULL ? true : false) && (players[1] == NULL ? true : false) &&
+		(players[2] == NULL ? true : false) && (players[3] == NULL ? true : false))
 	{
 		roomActive = false;
 		return;
@@ -54,7 +62,7 @@ void GameRoom::OneTick()
 	{
 		if (players[i] != NULL)
 		{
-			players[i]->recvedPhysics = false;
+			players[i]->recvedLastTickInfo = false;
 		}
 	}
 }
@@ -102,14 +110,6 @@ void GameRoom::ChangePlayerDirection(char dir, connection* player)
 	player->gameDir = (int)dir;
 }
 
-char GameRoom::GetPlayerDir(int playerID)
-{
-	if (players[playerID] != NULL)
-	{
-		return players[playerID]->gameDir;
-	}
-}
-
 int GameRoom::DisconnectPlayer(connection *player)
 {
 	for (int i = 0; i < 4; i++)
@@ -120,4 +120,9 @@ int GameRoom::DisconnectPlayer(connection *player)
 		}
 	}
 	return 0;
+}
+
+char GameRoom::GetPlayerDir(int playerID)
+{
+	return game.playerDirs[playerID];
 }

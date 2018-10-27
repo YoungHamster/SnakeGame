@@ -28,8 +28,8 @@ private:
 	Apple apple;
 	AABB appleSpawnZone;
 
-	short GameFieldWidth = 64;
-	short GameFieldHeight = 36;
+	short gameFieldWidth = 64;
+	short gameFieldHeight = 36;
 
 public:
 	std::vector<PhysicalObject> physics;
@@ -41,6 +41,7 @@ public:
 	bool MoveSnakeBlock(SnakeBlock* block);
 	bool MoveSnake(char Direction, int SnakeID);
 	void KillSnake(int SnakeID);
+	void SpawnApple();
 
 	/* Created for using in multiplayer */
 	void ChangeApplePostition(short minx, short miny);

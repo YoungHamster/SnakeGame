@@ -32,6 +32,8 @@ private:
 	int gameFieldHeight = 0;
 
 public:
+	char playerDirs[4];
+
 	std::vector<PhysicalObject> physics;
 	std::vector<SnakeBlock> snakes[4];
 	std::vector<std::vector<SnakeBlock>> newsnakes;

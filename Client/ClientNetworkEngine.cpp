@@ -2,8 +2,9 @@
 
 bool ClientNetworkEngine::ConnectToServer(std::wstring *nickname, const char* ip, unsigned short port)
 {
+#ifdef NETWORK_PROFILING
 	out.Write(ip);
-	connectionState = HANDSHAKING;
+#endif
 	game.Init(64, 36, 5, 5, 5, 5);
 	int succ;
 	WSAData wData;
@@ -20,7 +21,6 @@ bool ClientNetworkEngine::ConnectToServer(std::wstring *nickname, const char* ip
 #ifdef NETWORK_PROFILING
 		out.Write("connect() error\n");
 #endif
-		connectionState = DISCONNECTED;
 		return NULL;
 	}
 
@@ -31,14 +31,13 @@ bool ClientNetworkEngine::ConnectToServer(std::wstring *nickname, const char* ip
 	{
 		return false;
 	}
-	buff[0] = (char)(nickname->length() * 2);
-	buff[buff[0] + 2] = '\0';
+	buff[0] = (char)nickname->length();
 	BytesToWchar nicknameConv;
 	for (int i = 0; i < nickname->length(); i++, firstBuffLenght += 2)
 	{
 		nicknameConv.wchar = nickname->at(i);
-		buff[1 + i * sizeof(wchar_t)];
-		buff[2 + i * sizeof(wchar_t)];
+		buff[1 + i * sizeof(wchar_t)] = nicknameConv.bytes[0];
+		buff[2 + i * sizeof(wchar_t)] = nicknameConv.bytes[1];
 	}
 	int sendRes = send(sock, buff, firstBuffLenght, NULL);
 #ifdef NETWORK_PROFILING
@@ -66,30 +65,30 @@ bool ClientNetworkEngine::ConnectToServer(std::wstring *nickname, const char* ip
 #endif
 	return true;
 }
+
 ServerInfo ClientNetworkEngine::GetInfoAboutServer()
 {
 	ServerInfo servInfo;
 
 	/* Get active server rooms info */
-	char buff[4000];
+	char buff[4001];
 	buff[0] = 0x01;
-#ifdef NETWORK_PROFILING
-	auto time = std::chrono::high_resolution_clock::now();
 	send(sock, buff, 1, NULL);
 	int numberOfBytes = recv(sock, buff, sizeof(buff), NULL);
-	auto secondTime = std::chrono::high_resolution_clock::now();
-	out.Write("Delay before getting number of rooms = " + std::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(secondTime - time).count()) + "nanoseconds\n");
-#elif
-	send(sock, buff, 1, NULL);
+#ifdef NETWORK_PROFILING
+	out.Write("Got active rooms ids!\n");
 #endif
 	BytesToInt activeRoomsConv;
 	for (int i = 0; i < numberOfBytes / 4; i++)
 	{
 		for (int j = 0; j < sizeof(int); j++)
 		{
-			activeRoomsConv.bytes[j] = buff[i * sizeof(int) + j];
+			activeRoomsConv.bytes[j] = buff[1 + i * sizeof(int) + j];
 		}
 		servInfo.activeRoomsIDs.push_back(activeRoomsConv.integer);
+#ifdef NETWORK_PROFILING
+		out.Write("Active room id: " + std::to_string(activeRoomsConv.integer) + "\n");
+#endif
 	}
 
 	/* Test ping */
@@ -99,10 +98,10 @@ ServerInfo ClientNetworkEngine::GetInfoAboutServer()
 	{
 		buff[i] = (char)randomNumber(60, 127);
 	}
-	time = std::chrono::high_resolution_clock::now();
+	auto time = std::chrono::high_resolution_clock::now();
 	send(sock, buff, 512, NULL);
 	recv(sock, buff, 512, NULL);
-	secondTime = std::chrono::high_resolution_clock::now();
+	auto secondTime = std::chrono::high_resolution_clock::now();
 	long long delta = std::chrono::duration_cast<std::chrono::nanoseconds>(secondTime - time).count();
 	servInfo.pingInMs = delta / 1000000;
 #ifdef NETWORK_PROFILING
@@ -120,12 +119,18 @@ bool ClientNetworkEngine::CreateNewRoom()
 	recv(sock, buff, sizeof(buff), NULL);
 	if (buff[0] != 0x02)
 	{
+#ifdef NETWORK_PROFILING
+		out.Write("Error while creating room! Server sent wrong packet!\n");
+#endif
 		return false;
 	}
 	BytesToShort roomIDconv;
 	roomIDconv.bytes[0] = buff[1];
 	roomIDconv.bytes[1] = buff[2];
 	currentRoomID = roomIDconv.integer;
+#ifdef NETWORK_PROFILING
+	out.Write("Created new room!\n");
+#endif
 	return true;
 }
 
@@ -139,7 +144,7 @@ bool ClientNetworkEngine::JoinExistingRoom(short roomID)
 	buff[2] = roomIDconv.bytes[1];
 	send(sock, buff, 3, NULL);
 	recv(sock, buff, 3, NULL);
-	if (buff[0] != '\x03')
+	if (buff[0] != 0x03)
 	{
 #ifdef NETWORK_PROFILING
 		out.Write("Error while trying to join existing room with id: " + std::to_string(roomID) + '\n');
@@ -147,6 +152,9 @@ bool ClientNetworkEngine::JoinExistingRoom(short roomID)
 		return false;
 	}
 	currentRoomID = roomID;
+#ifdef NETWORK_PROFILING
+	out.Write("Connected to room with id: " + std::to_string(roomID) + "\n");
+#endif
 	return true;
 }
 
@@ -163,6 +171,9 @@ bool ClientNetworkEngine::LeaveRoom()
 #endif
 		return false;
 	}
+#ifdef NETWORK_PROFILING
+	out.Write("Left room.\n");
+#endif
 	return true;
 }
 
@@ -182,10 +193,13 @@ bool ClientNetworkEngine::VoteForStart()
 	if (buff[1] != true)
 	{
 #ifdef NETWORK_PROFILING
-		out.Write("Can't start match, all players should vote!\n");
+		out.Write("Can't start match, all players should vote for start!\n");
 #endif
 		return false;
 	}
+#ifdef NETWORK_PROFILING
+	out.Write("Started match!\n");
+#endif
 	return true;
 }
 
@@ -199,7 +213,9 @@ int ClientNetworkEngine::Ping()
 	buff[0] = 0x06;
 	if (send(sock, buff, 1, NULL) != 1)
 	{
+#ifdef NETWORK_PROFILING
 		out.Write("Can't ping server!\n");
+#endif
 		return -1;
 	}
 	auto time = std::chrono::high_resolution_clock::now();
@@ -214,79 +230,42 @@ int ClientNetworkEngine::Ping()
 	return (int)ping / 1000000;
 }
 
-NetStates ClientNetworkEngine::GameTick(char dir)
+int ClientNetworkEngine::GameTick(char dir)
 {
 	char buff[18];
 	buff[0] = 0x07;
-	send(sock, buff, 1, NULL);
+	buff[1] = dir;
+	send(sock, buff, 2, NULL);
 	recv(sock, buff, sizeof(buff), NULL);
-	game.OneTick(buff[2], buff[3], buff[4], buff[5]);
-	BytesToShort someStuffConverter[6];
-	for (int i = 0; i < 6; i++)
+	if (buff[1] == 0x01)
 	{
-		someStuffConverter[i].bytes[0] = buff[6 + i * sizeof(short)];
-		someStuffConverter[i].bytes[1] = buff[7 + i * sizeof(short)];
-	}
-	game.ChangeApplePostition(someStuffConverter[0].integer, someStuffConverter[1].integer);
-	if (game.snakes[0].size() != someStuffConverter[2].integer || game.snakes[1].size() != someStuffConverter[3].integer
-		|| game.snakes[2].size() != someStuffConverter[4].integer || game.snakes[3].size() != someStuffConverter[5].integer)
-	{
-		if (!SynchronizeGame())
+		game.OneTick(buff[2], buff[3], buff[4], buff[5]);
+		BytesToShort someStuffConverter[6];
+		for (int i = 0; i < 6; i++)
 		{
-#ifdef NETWORK_PROFILING
-			out.Write("Crytical error! can't synchronyze game!\n");
-#endif
+			someStuffConverter[i].bytes[0] = buff[6 + i * sizeof(short)];
+			someStuffConverter[i].bytes[1] = buff[7 + i * sizeof(short)];
 		}
-	}
-	return connectionState;
-}
-
-bool ClientNetworkEngine::StopMatch()
-{
-	char buff[1];
-	buff[0] = 0x09;
-	send(sock, buff, 1, NULL);
-	recv(sock, buff, 1, NULL);
-	if (buff[0] != 0x09)
-	{
+		game.ChangeApplePostition(someStuffConverter[0].integer, someStuffConverter[1].integer);
+		if (game.snakes[0].size() != someStuffConverter[2].integer || game.snakes[1].size() != someStuffConverter[3].integer
+			|| game.snakes[2].size() != someStuffConverter[4].integer || game.snakes[3].size() != someStuffConverter[5].integer)
+		{
+			if (!SynchronizeGame())
+			{
 #ifdef NETWORK_PROFILING
-		out.Write("Crytical error! Can't stop match\n");
+				out.Write("Crytical error! can't synchronyze game!\n");
 #endif
-		return false;
-	}
-	return false;
+			}
+		}
+	}	
+	return 0;
 }
 
-bool ClientNetworkEngine::PauseMatch()
-{
-	char buff[1];
-	buff[0] = 0x0A;
-	send(sock, buff, 1, NULL);
-	recv(sock, buff, 1, NULL);
-	if (buff[0] != 0x09)
-	{
-#ifdef NETWORK_PROFILING
-		out.Write("Crytical error! Can't pause match\n");
-#endif
-		return false;
-	}
-	return false;
-}
-
-bool ClientNetworkEngine::Disconnect()
-{
-	char buff[1];
-	buff[0] = 0x08;
-	send(sock, buff, 1, NULL);
-	Sleep(100);
-	closesocket(sock);
-	return true;
-}
-
-/**/
-/* */
 bool ClientNetworkEngine::SynchronizeGame()
 {
+#ifdef NETWORK_PROFILING
+
+#endif
 	char enterbuff[1];
 	enterbuff[0] = 0x08;
 	send(sock, enterbuff, 1, NULL);
@@ -311,7 +290,6 @@ bool ClientNetworkEngine::SynchronizeGame()
 	}
 	if (buff[0] != 0x08)
 	{
-		connectionState = SOMEERROR;
 		return false;
 	}
 	game.physics.clear();
@@ -329,7 +307,7 @@ bool ClientNetworkEngine::SynchronizeGame()
 	{
 		for (int j = 0; j < sizeof(PhysicalObject); j++)
 		{
-			physicsConv.bytes[j] = buff[j + 1 + sizeof(PhysicalObject) * i];
+			physicsConv.bytes[j] = buff[j + 11 + sizeof(PhysicalObject) * i];
 		}
 		game.physics[i] = physicsConv.obj;
 	}
@@ -339,7 +317,7 @@ bool ClientNetworkEngine::SynchronizeGame()
 	{
 		for (int j = 0; j < sizeof(SnakeBlock); j++)
 		{
-			snakesConv.bytes[j] = buff[j + 1 + lenghtsConverter[0].integer * sizeof(PhysicalObject)];
+			snakesConv.bytes[j] = buff[j + 11 + lenghtsConverter[0].integer * sizeof(PhysicalObject) + i * sizeof(SnakeBlock)];
 		}
 		game.snakes[0][i] = snakesConv.block;
 	}
@@ -347,7 +325,7 @@ bool ClientNetworkEngine::SynchronizeGame()
 	{
 		for (int j = 0; j < sizeof(SnakeBlock); j++)
 		{
-			snakesConv.bytes[j] = buff[j + 1 + lenghtsConverter[0].integer * sizeof(PhysicalObject) + lenghtsConverter[1].integer * sizeof(SnakeBlock)];
+			snakesConv.bytes[j] = buff[j + 11 + lenghtsConverter[0].integer * sizeof(PhysicalObject) + lenghtsConverter[1].integer * sizeof(SnakeBlock) + i * sizeof(SnakeBlock)];
 		}
 		game.snakes[1][i] = snakesConv.block;
 	}
@@ -355,7 +333,7 @@ bool ClientNetworkEngine::SynchronizeGame()
 	{
 		for (int j = 0; j < sizeof(SnakeBlock); j++)
 		{
-			snakesConv.bytes[j] = buff[j + 1 + lenghtsConverter[0].integer * sizeof(PhysicalObject) + (lenghtsConverter[1].integer + lenghtsConverter[2].integer) * sizeof(SnakeBlock)];
+			snakesConv.bytes[j] = buff[j + 11 + lenghtsConverter[0].integer * sizeof(PhysicalObject) + (lenghtsConverter[1].integer + lenghtsConverter[2].integer) * sizeof(SnakeBlock) + i * sizeof(SnakeBlock)];
 		}
 		game.snakes[2][i] = snakesConv.block;
 	}
@@ -363,12 +341,84 @@ bool ClientNetworkEngine::SynchronizeGame()
 	{
 		for (int j = 0; j < sizeof(SnakeBlock); j++)
 		{
-			snakesConv.bytes[j] = buff[j + 1 + lenghtsConverter[0].integer * sizeof(PhysicalObject) + (lenghtsConverter[1].integer + lenghtsConverter[2].integer + lenghtsConverter[3].integer) * sizeof(SnakeBlock)];
+			snakesConv.bytes[j] = buff[j + 11 + lenghtsConverter[0].integer * sizeof(PhysicalObject) + (lenghtsConverter[1].integer + lenghtsConverter[2].integer + lenghtsConverter[3].integer) * sizeof(SnakeBlock) + i * sizeof(SnakeBlock)];
 		}
 		game.snakes[3][i] = snakesConv.block;
 	}
 
-	
+#ifdef NETWORK_PROFILING
+	out.Write("Synchronyzed game!\n");
+#endif
+	return true;
+}
+
+bool ClientNetworkEngine::StopMatch()
+{
+	char buff[1];
+	buff[0] = 0x09;
+	send(sock, buff, 1, NULL);
+	recv(sock, buff, 1, NULL);
+	if (buff[0] != 0x09)
+	{
+#ifdef NETWORK_PROFILING
+		out.Write("Crytical error! Can't stop match!\n");
+#endif
+		return false;
+	}
+#ifdef NETWORK_PROFILING
+	out.Write("Stopped match.\n");
+#endif
+	return false;
+}
+
+bool ClientNetworkEngine::PauseMatch()
+{
+	char buff[1];
+	buff[0] = 0x0A;
+	send(sock, buff, 1, NULL);
+	recv(sock, buff, 1, NULL);
+	if (buff[0] != 0x0A)
+	{
+#ifdef NETWORK_PROFILING
+		out.Write("Crytical error! Can't pause match\n");
+#endif
+		return false;
+	}
+#ifdef NETWORK_PROFILING
+	out.Write("Paused match.\n");
+#endif
+	return false;
+}
+
+bool ClientNetworkEngine::UnpauseMatch()
+{
+	char buff[1];
+	buff[0] = 0x0B;
+	send(sock, buff, 1, NULL);
+	recv(sock, buff, 1, NULL);
+	if (buff[0] != 0x0B)
+	{
+#ifdef NETWORK_PROFILING
+		out.Write("Crytical error! Can't unpause match\n");
+#endif
+		return false;
+	}
+#ifdef NETWORK_PROFILING
+	out.Write("Unpaused match.\n");
+#endif
+	return false;
+}
+
+bool ClientNetworkEngine::Disconnect()
+{
+	char buff[1];
+	buff[0] = 0x0C;
+	send(sock, buff, 1, NULL);
+	Sleep(100);
+	closesocket(sock);
+#ifdef NETWORK_PROFILING
+	out.Write("Disconnected.\n");
+#endif
 	return true;
 }
 
@@ -376,7 +426,6 @@ std::vector<PhysicalObject>& ClientNetworkEngine::GetPhysicsForRenderer()
 {
 	return game.physics;
 }
-
 
 void ClientNetworkEngine::ZeroBuff(char* firstByte, int sizeOfBuff)
 {
