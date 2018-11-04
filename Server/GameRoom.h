@@ -6,8 +6,10 @@
 #include <iostream>
 #include <thread>
 #include <vector>
-#include "ServerGameLogic.h"
+#include "Core//GameLogic.h"
 #include "connection.h"
+
+#define SIZE_OF_GAME_STATES_HISTORY 8
 
 class GameRoom
 {
@@ -16,11 +18,11 @@ private:
 public:
 	bool matchRunning = false;
 	bool roomActive = false;
-	wchar_t* title = const_cast<wchar_t*>(L"New room");
-
-	bool currentlyUsingPDs = false;
+	std::wstring title = L"GAME ROOM";
 	connection* players[4];
 	float GameSpeed = 1.0;
+
+	MultiplayerGameLogicController gameController[SIZE_OF_GAME_STATES_HISTORY];
 
 	void Init(connection *roomcreator);
 	int ConnectPlayer(connection *player);
@@ -34,13 +36,5 @@ public:
 	int DisconnectPlayer(connection *player);
 	int ReloadGame() { game.Init(64, 36, 5, 5, 5, 5); return 0; }
 
-	int GetNumberOfPlayers();
-	
-
-	/*void o()
-	{
-		std::ofstream uid;
-		uid.open("uid.uid", std::ios_base::out | std::ios_base::binary);
-		uid << userUID;
-	}*/
+	char GetNumberOfPlayers();
 };

@@ -2,11 +2,12 @@
 #include <chrono>
 #include <Windowsx.h>
 
-#include "Random.h"
-#include "Physics.h"
-#include "GameLogic.h"
-#include "Apple.h"
-#include "ReadInput.h"
+/* Files from core are same for client and for server */
+#include "Core//Random.h"
+#include "Core//Physics.h"
+#include "Core//GameLogic.h"
+#include "Core//Apple.h"
+
 #include "Menu.h"
 #include "ClientNetworkEngine.h"
 #include "Renderer.h"

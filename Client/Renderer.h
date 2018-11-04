@@ -13,10 +13,8 @@
 
 #define RENDERER
 
-#include "Physics.h"
-//#include "Page.h"
+#include "Core//Physics.h"
 #include "Button.h"
-#include "SDL_Rect.h"
 
 #define CREATION_RENDER_TARGET_ERROR 1
 #define CREATION_BRUSH_ERROR 2
@@ -48,9 +46,6 @@ public:
 
 	bool Init(HWND windowhandle);
 	void RenderFrame(std::vector<PhysicalObject>& physics, std::vector<button>& buttons, bool menumode);
-	//void RenderFrame(char compressedPhysics[GAMEFIELDHEIGTH * GAMEFIELDWIDTH], std::vector<button>& buttons);
-	//void RenderFrame(char* compressedPhysics, std::vector<button>& buttons, int height, int width);
-	//void RenderFrame(std::vector<PhysicalObject>& physics, std::vector<button>& buttons);
 
 	void BeginDraw() { rendertarget->BeginDraw(); }
 	void EndDraw() { rendertarget->EndDraw(); }
@@ -62,7 +57,6 @@ public:
 	int CountTextWidth(const wchar_t* text, int Size);
 	/* Use only inside RenderFrame function */
 	void DrawTextOnRend(const wchar_t* text, int Size, int minX, int minY);
-	void AutoDrawStats();
 	/* Use only inside RenderFrame function */
 	void RenderButton(button button);
 

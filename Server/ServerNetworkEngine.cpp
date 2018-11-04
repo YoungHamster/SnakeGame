@@ -1,7 +1,7 @@
 #include "ServerNetworkEngine.h"
 
 int SendMainInformationAboutServer(char *buff, int buffSize, GameRoom *firstRoom, connection *player);
-int SendActiveRoomsIds(char *buff, int buffSize, GameRoom *firstRoom, connection *player);
+int SendActiveRoomsInfo(char *buff, int buffSize, GameRoom *firstRoom, connection *player);
 int CreateNewRoom(char *buff, int buffSize, GameRoom *firstRoom, connection *player);
 int JoinExistingRoom(char *buff, int buffSize, GameRoom *firstRoom, connection *player);
 int LeaveRoom(char *buff, int buffSize, GameRoom *firstRoom, connection *player);
@@ -13,6 +13,8 @@ int StopMatch(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
 int PauseMatch(char* buff, int buffSize, GameRoom *firstRoom, connection *player);
 int UnpauseMatch(char* buff, int buffSize, GameRoom *firstRoom, connection *player);
 int Disconnect(char* buff, int buffSize, GameRoom *firstRoom, connection *player);
+int ChangeRoomName(char* buff, int buffSize, GameRoom *firstRoom, connection *player);
+int ClientGameTick(char* buff, int buffSize, GameRoom *firstRoom, connection *player);
 
 bool NetworkEngine::Init()
 {
@@ -32,7 +34,7 @@ bool NetworkEngine::Init()
 	std::cout << "Server started!" << std::endl;
 
 	functions[0] = SendMainInformationAboutServer;
-	functions[1] = SendActiveRoomsIds;
+	functions[1] = SendActiveRoomsInfo;
 	functions[2] = CreateNewRoom;
 	functions[3] = JoinExistingRoom;
 	functions[4] = LeaveRoom;
@@ -44,6 +46,7 @@ bool NetworkEngine::Init()
 	functions[10] = PauseMatch;
 	functions[11] = UnpauseMatch;
 	functions[12] = Disconnect;
+	functions[13] = ChangeRoomName;
 	return true;
 }
 
@@ -96,6 +99,10 @@ void NetworkEngine::AsyncUserConnection(GameRoom *firstRoom, connection *connect
 		if (buff[0] < NUMBER_OF_PACKETS && buff[0] >= 0)
 		{
 			functions[buff[0]](buff, sizeof(buff), firstRoom, connection);
+		}
+		else
+		{
+			std::cout << "Client sent wrong packet! Wrong header! Header byte should be between 0 and " << NUMBER_OF_PACKETS << " but it was " << (int)buff[0] << std::endl;
 		}
 	}
 }
@@ -215,7 +222,7 @@ void AsyncRoomThr(GameRoom *room)
 {
 	int lastTickTime = 0;
 	//double GameSpeed = 1.0;
-	room->GameSpeed = 0.5;
+	room->GameSpeed = 0.75;
 	while (serverrunning && room->AnyConnectedPlayers() && room->roomActive)
 	{
 		Sleep(75 / room->GameSpeed / 2);
@@ -239,30 +246,100 @@ int SendMainInformationAboutServer(char *buff, int buffSize, GameRoom *firstRoom
 	return 0;
 }
 
-int SendActiveRoomsIds(char *buff, int buffSize, GameRoom *firstRoom, connection *player)
+/* Find every active room and send its name, id in rooms array, number of connected players, game speed and nicknames of connected players */
+int SendActiveRoomsInfo(char *buff, int buffSize, GameRoom *firstRoom, connection *player)
 {
 	if (buff[0] != 0x01)
 	{
 		return -1;
 	}
 	GameRoom *room = firstRoom;
-	char activeRoomsIds[4001];
-	activeRoomsIds[0] = 0x01;
+	char activeRoomsInfo[1024 * 10];
+	activeRoomsInfo[0] = 0x01;
+	activeRoomsInfo[1] = 0x00;
 	int numberOfActiveRooms = 0;
+	int sizeOfBuffer = 2; // 2 bytes-header
 	IntToBytes idsConv;
+	FloatToBytes gameSpeedConv;
+	ShortToBytes stringsSizesConv;
+	WcharToBytes textsConv;
 	for (int i = 0; i < NUMBER_OF_ROOMS; i++)
 	{
 		if (firstRoom[i].roomActive)
 		{
+			/* if server filled buffer, but there are still some rooms info it sends it with 0x01 in header and then fills it again and sends second, third, etc buffer */
+			if ((sizeOfBuffer +	firstRoom[i].title.size() * 2 + sizeof(short) * 5 +
+				sizeof(int) + sizeof(float) + sizeof(char) +
+				firstRoom[i].players[0] == NULL ? firstRoom[i].players[0]->nickname.size() : 0 +
+				firstRoom[i].players[1] == NULL ? firstRoom[i].players[1]->nickname.size() : 0 +
+				firstRoom[i].players[2] == NULL ? firstRoom[i].players[2]->nickname.size() : 0 +
+				firstRoom[i].players[3] == NULL ? firstRoom[i].players[3]->nickname.size() : 0)
+				>= 1024 * 20)
+			{
+				activeRoomsInfo[1] = 0x01;
+				send(player->connectSock, activeRoomsInfo, sizeOfBuffer, NULL);
+				sizeOfBuffer = 0;
+			}
+
+			/* convert room id */
 			idsConv.integer = i;
 			for (int j = 0; j < sizeof(int); j++)
 			{
-				activeRoomsIds[1 + numberOfActiveRooms * sizeof(int) + j] = idsConv.bytes[j];
+				activeRoomsInfo[sizeOfBuffer + j] = idsConv.bytes[j];
+			}
+			sizeOfBuffer += sizeof(int);
+			
+			/* convert game speed */
+			gameSpeedConv.number = firstRoom[i].GameSpeed;
+			for (int j = 0; j < sizeof(int); j++)
+			{
+				activeRoomsInfo[sizeOfBuffer + j] = gameSpeedConv.bytes[j];
+			}
+			sizeOfBuffer += sizeof(float);
+
+			/* convert number of players */
+			activeRoomsInfo[sizeOfBuffer] = firstRoom[i].GetNumberOfPlayers();
+			sizeOfBuffer += 1;
+
+			/* convert sizes of strings */
+			/* size of room name */
+			stringsSizesConv.integer = firstRoom[i].title.size();
+			activeRoomsInfo[sizeOfBuffer] = stringsSizesConv.bytes[0];
+			activeRoomsInfo[sizeOfBuffer + 1] = stringsSizesConv.bytes[1];
+			sizeOfBuffer += sizeof(short);
+			/* sizes of players nicknames */
+			for (int j = 0; j < 4; j++, sizeOfBuffer += sizeof(short))
+			{
+				stringsSizesConv.integer = firstRoom[i].players[j] == NULL ? 0 : (short)firstRoom[i].players[j]->nickname.size();
+				activeRoomsInfo[sizeOfBuffer] = stringsSizesConv.bytes[0];
+				activeRoomsInfo[sizeOfBuffer + 1] = stringsSizesConv.bytes[1];
+			}
+
+			/* convert room name */
+			for (int j = 0; j < firstRoom[i].title.size(); j++, sizeOfBuffer += sizeof(wchar_t))
+			{
+				textsConv.wchar = firstRoom[i].title[j];
+				activeRoomsInfo[sizeOfBuffer] = textsConv.bytes[0];
+				activeRoomsInfo[sizeOfBuffer + 1] = textsConv.bytes[1];
+			}
+
+			/* convert players nicknames */
+			for (int k = 0; k < 4; k++)
+			{
+				if (firstRoom[i].players[k] != NULL)
+				{
+					for (int j = 0; j < firstRoom[i].players[k]->nickname.size(); j++, sizeOfBuffer += sizeof(wchar_t))
+					{
+						textsConv.wchar = firstRoom[i].players[k]->nickname[j];
+						activeRoomsInfo[sizeOfBuffer] = textsConv.bytes[0];
+						activeRoomsInfo[sizeOfBuffer + 1] = textsConv.bytes[1];
+					}
+				}
 			}
 			numberOfActiveRooms++;
 		}
 	}
-	send(player->connectSock, activeRoomsIds, numberOfActiveRooms * sizeof(int) + 1, NULL);
+	send(player->connectSock, activeRoomsInfo, sizeOfBuffer, NULL);
 	return 0;
 }
 
@@ -384,7 +461,7 @@ int Pong(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
 	auto secondTime = std::chrono::high_resolution_clock::now();
 	long long ping = std::chrono::duration_cast<std::chrono::nanoseconds>(secondTime - time).count();
 	double kbpersec = 1000 * 1000 * 1000 / (double)ping;
-	std::cout << "Statistics of " << player->nickname << " with uuid-" << player->uuid << ": speed = " << kbpersec << "kb/sec, ping = " << ping / 1000000 << "ms, or " << ping << "ns" << std::endl;
+	std::cout << "Statistics of " << player->nickname.c_str() << " with uuid-" << player->uuid << ": speed = " << kbpersec << "kb/sec, ping = " << ping / 1000000 << "ms, or " << ping << "ns" << std::endl;
 	return 0;
 }
 
@@ -569,4 +646,36 @@ int Disconnect(char* buff, int buffSize, GameRoom *firstRoom, connection *player
 	closesocket(player->connectSock);
 	std::cout << "Player disconnected" << std::endl;
 	return 0;
+}
+
+int ChangeRoomName(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
+{
+	if (buff[0] != 0x0D)
+	{
+		return -1;
+	}
+	ShortToBytes roomNameSizeConv;
+	roomNameSizeConv.bytes[0] = buff[1];
+	roomNameSizeConv.bytes[1] = buff[2];
+	WcharToBytes roomNameConv;
+	for (int i = 0; i < roomNameSizeConv.integer; i++)
+	{
+		roomNameConv.bytes[0] = buff[3 + i * sizeof(wchar_t)];
+		roomNameConv.bytes[1] = buff[4 + i * sizeof(wchar_t)];
+		firstRoom[player->roomIdInRoomsArray].title[i] = roomNameConv.wchar;
+	}
+	char respone[1];
+	respone[0] = true;
+	send(player->connectSock, respone, 1, NULL);
+	return 0;
+}
+
+int ClientGameTick(char* buff, int buffSize, GameRoom *firstRoom, connection *player)
+{
+	if (buff[0] != 0x0E)
+	{
+		return -1;
+	}
+	char buff[1500];
+	buff[0] = 0x0E;
 }

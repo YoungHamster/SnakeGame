@@ -8,20 +8,14 @@
 #include <vector>
 #pragma comment(lib, "Ws2_32.lib")
 
-#include "Physics.h"
-#include "GameLogic.h"
+#include "Core//Physics.h"
+#include "Core//GameLogic.h"
+#include "Core//MultiplayerGameLogicController.h"
 #include "Console.h"
 
 #define NETWORK_PROFILING
 
 #define CREATE_NEW_ROOM_ON_SERVER 2147483647
-
-struct GameState
-{
-	int tickNumber;
-	std::vector<PhysicalObject> physics;
-	std::vector<SnakeBlock> snakes[4];
-};
 
 struct ServerRoomInfo
 {
@@ -29,7 +23,7 @@ struct ServerRoomInfo
 	int ID;
 	std::wstring roomName;
 	char numberOfPlayers;
-	std::vector<std::wstring> nicknamesOfPlayers;
+	std::wstring nicknamesOfPlayers[4];
 };
 
 struct ServerInfo
@@ -37,29 +31,14 @@ struct ServerInfo
 	std::wstring serverName;
 	int numberOfConnectedPlayers;
 	int pingInMs;
-	std::vector<std::wstring> roomsNames;
 	std::vector<int> activeRoomsIDs;
 	std::vector<ServerRoomInfo> activeRooms;
 };
 
-enum NetStates
+union BytesToShortGameTickInfo
 {
-	SOMEERROR,
-	DISCONNECTED,
-	HANDSHAKING,
-	WAITING_MATCH_START,
-	MATCH_OK,
-	MATCH_DESYNC
-};
-
-enum NetEngineInput
-{
-	VOTE_FOR_START,
-	TURN_UP,
-	TURN_DOWN,
-	TURN_LEFT,
-	TURN_RIGHT,
-	DISCONNECT
+	ShortGameTickInfo info;
+	char bytes[sizeof(ShortGameTickInfo)];
 };
 
 union BytesToULL
@@ -98,10 +77,10 @@ union BytesToSnakeBlock
 	char bytes[sizeof(SnakeBlock)];
 };
 
-union ByteToBool
+union BytesToFloat
 {
-	bool boolean;
-	char byte;
+	float number;
+	char bytes[sizeof(float)];
 };
 
 class ClientNetworkEngine
@@ -118,15 +97,15 @@ private:
 	ServerInfo currentServer;
 	short currentRoomID = -1;
 
-	GameState* statesBuffer;
+	MultiplayerGameLogicController gameController;
 
 	bool SynchronizeGame();
 public:
 	bool ConnectToServer(std::wstring *nickname, const char* ip, unsigned short port);
-	ServerInfo GetInfoAboutServer();
+	ServerInfo* GetInfoAboutServer();
 	bool CreateNewRoom();
 	bool JoinExistingRoom(short roomID);
-	bool LeaveRoom();
+	ServerInfo* LeaveRoom();
 	bool VoteForStart();
 	int Ping();
 	int GameTick(char dir);
@@ -134,6 +113,7 @@ public:
 	bool PauseMatch();
 	bool UnpauseMatch();
 	bool Disconnect();
+	bool ChangeRoomName(std::wstring* newRoomName);
 	static void ZeroBuff(char* firstByte, int sizeOfBuff);
 	std::vector<PhysicalObject>& GetPhysicsForRenderer();
 };

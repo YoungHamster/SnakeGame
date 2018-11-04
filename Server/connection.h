@@ -5,14 +5,13 @@
 struct connection
 {
 	SOCKET connectSock;
-	unsigned long long uuid; // deprecated
-	wchar_t* nickname;
+	unsigned long long uuid;
+	std::wstring nickname;
 	short nicknameLenght;
 	char gameDir = LEFT;
 	bool recvedLastTickInfo = false;
 	bool connected = false;
 	bool votedForStart = false;
-	bool compressPhysics = true;
 	short ownIdConnectionsArray;
-	short roomIdInRoomsArray;
+	short roomIdInRoomsArray = -1;
 };

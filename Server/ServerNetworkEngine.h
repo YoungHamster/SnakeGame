@@ -14,7 +14,7 @@
 
 #define NUMBER_OF_ROOMS 1000
 #define NUMBER_OF_PLAYERS 4000
-#define NUMBER_OF_PACKETS 13
+#define NUMBER_OF_PACKETS 14
 
 static bool serverrunning = true;
 

@@ -188,10 +188,10 @@ inline void FuncConnectToServer(Menu* menu, MenuEvent Event)
 	if (Event.networkEngine->ConnectToServer(Event.additionalInfoWstr, Event.additionalInfoChar, 25565))
 	{
 		menu->RegisterEvent(ConnectedToServer, 0, NULL, NULL, NULL, Event.networkEngine, NULL);
-		ServerInfo info = Event.networkEngine->GetInfoAboutServer();
-		for (int i = 0; i < info.activeRoomsIDs.size(); i++)
+		ServerInfo* info = Event.networkEngine->GetInfoAboutServer();
+		for (int i = 0; i < info->activeRooms.size(); i++)
 		{
-			menu->pages[MultiplayerChoosingRoom].AddButton(true, true, 0, 190 + i * 60, NULL, L"ROOM " + std::to_wstring(info.activeRoomsIDs[i]), 10, Event.rend, ChooseRoom, info.activeRoomsIDs[i]);
+			menu->pages[MultiplayerChoosingRoom].AddButton(true, true, 0, 190 + i * 60, NULL, info->activeRooms[i].roomName + std::to_wstring(info->activeRooms[i].ID), 10, Event.rend, ChooseRoom, info->activeRooms[i].ID);
 		}
 	}
 }
@@ -266,7 +266,12 @@ inline void FuncDisconnectFromServer(Menu* menu, MenuEvent Event)
 
 inline void FuncLeaveServerRoom(Menu* menu, MenuEvent Event)
 {
-	Event.networkEngine->LeaveRoom();
+	ServerInfo* info = Event.networkEngine->LeaveRoom();
+	menu->pages[MultiplayerChoosingRoom].buttons.resize(2);
+	for (int i = 0; i < info->activeRooms.size(); i++)
+	{
+		menu->pages[MultiplayerChoosingRoom].AddButton(true, true, 0, 190 + i * 60, NULL, info->activeRooms[i].roomName + std::to_wstring(info->activeRooms[i].ID), 10, Event.rend, ChooseRoom, info->activeRooms[i].ID);
+	}
 }
 
 inline void FuncPauseServerGame(Menu* menu, MenuEvent Event)

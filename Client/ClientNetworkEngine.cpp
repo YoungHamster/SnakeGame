@@ -66,31 +66,68 @@ bool ClientNetworkEngine::ConnectToServer(std::wstring *nickname, const char* ip
 	return true;
 }
 
-ServerInfo ClientNetworkEngine::GetInfoAboutServer()
+ServerInfo* ClientNetworkEngine::GetInfoAboutServer()
 {
-	ServerInfo servInfo;
-
+	currentServer.activeRooms.clear();
+	currentServer.activeRoomsIDs.clear();
+	currentServer.serverName.clear();
 	/* Get active server rooms info */
 	char buff[4001];
 	buff[0] = 0x01;
 	send(sock, buff, 1, NULL);
 	int numberOfBytes = recv(sock, buff, sizeof(buff), NULL);
+	int numberOfHandledBytes = 2;
 #ifdef NETWORK_PROFILING
-	out.Write("Got active rooms ids!\n");
+	out.Write("Got active rooms information!\n");
 #endif
-	BytesToInt activeRoomsConv;
-	for (int i = 0; i < numberOfBytes / 4; i++)
+	BytesToInt roomsIdsConv;
+	BytesToShort stringsSizesConv;
+	BytesToFloat gameSpeedConv;
+	BytesToWchar stringsConv;
+	short stringsSizes[5];
+	if (numberOfBytes > 2)
 	{
-		for (int j = 0; j < sizeof(int); j++)
+		while (numberOfHandledBytes < numberOfBytes)
 		{
-			activeRoomsConv.bytes[j] = buff[1 + i * sizeof(int) + j];
+			currentServer.activeRooms.resize(currentServer.activeRooms.size() + 1);
+			for (int i = 0; i < sizeof(int); i++, numberOfHandledBytes++)
+			{
+				roomsIdsConv.bytes[i] = buff[numberOfHandledBytes];
+			}
+			currentServer.activeRooms[currentServer.activeRooms.size() - 1].ID = roomsIdsConv.integer;
+			for (int i = 0; i < sizeof(float); i++, numberOfHandledBytes++)
+			{
+				gameSpeedConv.bytes[i] = buff[numberOfBytes];
+			}
+			currentServer.activeRooms[currentServer.activeRooms.size() - 1].gameSpeed = gameSpeedConv.number;
+			for (int i = 0; i < 5; i++, numberOfHandledBytes += sizeof(short))
+			{
+				stringsSizesConv.bytes[0] = buff[numberOfHandledBytes];
+				stringsSizesConv.bytes[1] = buff[numberOfHandledBytes + 1];
+				stringsSizes[i] = stringsSizesConv.integer;
+			}
+			currentServer.activeRooms[currentServer.activeRooms.size() - 1].roomName.resize(stringsSizes[0]);
+			currentServer.activeRooms[currentServer.activeRooms.size() - 1].nicknamesOfPlayers[0].resize(stringsSizes[1]);
+			currentServer.activeRooms[currentServer.activeRooms.size() - 1].nicknamesOfPlayers[1].resize(stringsSizes[2]);
+			currentServer.activeRooms[currentServer.activeRooms.size() - 1].nicknamesOfPlayers[2].resize(stringsSizes[3]);
+			currentServer.activeRooms[currentServer.activeRooms.size() - 1].nicknamesOfPlayers[3].resize(stringsSizes[4]);
+			for (int i = 0; i < stringsSizes[0]; i++, numberOfHandledBytes += sizeof(wchar_t))
+			{
+				stringsConv.bytes[0] = buff[numberOfHandledBytes];
+				stringsConv.bytes[1] = buff[numberOfHandledBytes + 1];
+				currentServer.activeRooms[currentServer.activeRooms.size() - 1].roomName[i] = stringsConv.wchar;
+			}
+			for (int i = 0; i < 4; i++)
+			{
+				for (int j = 0; j < stringsSizes[1 + i]; j++, numberOfHandledBytes += sizeof(wchar_t))
+				{
+					stringsConv.bytes[0] = buff[numberOfHandledBytes];
+					stringsConv.bytes[1] = buff[numberOfHandledBytes + 1];
+					currentServer.activeRooms[currentServer.activeRooms.size() - 1].nicknamesOfPlayers[i][j] = stringsConv.wchar;
+				}
+			}
 		}
-		servInfo.activeRoomsIDs.push_back(activeRoomsConv.integer);
-#ifdef NETWORK_PROFILING
-		out.Write("Active room id: " + std::to_string(activeRoomsConv.integer) + "\n");
-#endif
 	}
-
 	/* Test ping */
 	buff[0] = 0x06;
 	send(sock, buff, 1, NULL);
@@ -103,12 +140,12 @@ ServerInfo ClientNetworkEngine::GetInfoAboutServer()
 	recv(sock, buff, 512, NULL);
 	auto secondTime = std::chrono::high_resolution_clock::now();
 	long long delta = std::chrono::duration_cast<std::chrono::nanoseconds>(secondTime - time).count();
-	servInfo.pingInMs = delta / 1000000;
+	currentServer.pingInMs = delta / 1000000;
 #ifdef NETWORK_PROFILING
 	out.Write("Ping = " + std::to_string(delta) + "nanoseconds\n");
 #endif
 
-	return servInfo;
+	return &currentServer;
 }
 
 bool ClientNetworkEngine::CreateNewRoom()
@@ -158,7 +195,7 @@ bool ClientNetworkEngine::JoinExistingRoom(short roomID)
 	return true;
 }
 
-bool ClientNetworkEngine::LeaveRoom()
+ServerInfo* ClientNetworkEngine::LeaveRoom()
 {
 	char buff[1];
 	buff[0] = 0x04;
@@ -174,7 +211,7 @@ bool ClientNetworkEngine::LeaveRoom()
 #ifdef NETWORK_PROFILING
 	out.Write("Left room.\n");
 #endif
-	return true;
+	return GetInfoAboutServer();
 }
 
 bool ClientNetworkEngine::VoteForStart()
@@ -232,11 +269,49 @@ int ClientNetworkEngine::Ping()
 
 int ClientNetworkEngine::GameTick(char dir)
 {
-	char buff[18];
-	buff[0] = 0x07;
+	char buff[2 + 4 * sizeof(ShortGameTickInfo)];
+	buff[0] = 0x0E;
 	buff[1] = dir;
-	send(sock, buff, 2, NULL);
+	BytesToShortGameTickInfo ticksShortInfoConv;
+	for (int i = 0; i < 4; i++)
+	{
+		ticksShortInfoConv.info = *gameController.GetShortTickInfoPointerByTickID(gameController.GetCurrentTickID() - i);
+		for (int j = 0; j < sizeof(ShortGameTickInfo); j++)
+		{
+			buff[2 + j] = ticksShortInfoConv.bytes[j];
+		}
+	}
+	send(sock, buff, sizeof(buff), NULL);
 	recv(sock, buff, sizeof(buff), NULL);
+	switch (buff[1])
+	{
+	case 0x00:
+		gameController.ChangePlayersDirections(&buff[3]);
+		gameController.GameTick();
+		break;
+	case 0x01:
+		int lastEqualTickID;
+		BytesToInt lastEqualTickIDConv;
+		for (int i = 0; i < sizeof(int); i++)
+		{
+			lastEqualTickIDConv.bytes[i] = buff[2 + i];
+		}
+		lastEqualTickID = lastEqualTickIDConv.integer;
+		ShortGameTickInfo *ticksInfo = new ShortGameTickInfo[gameController.GetCurrentTickID() - lastEqualTickID];
+		for (int i = 0; i < gameController.GetCurrentTickID() - lastEqualTickID; i++)
+		{
+			for (int j = 0; j < sizeof(ShortGameTickInfo); j++)
+			{
+				ticksShortInfoConv.bytes[j] = buff[j + 2 + sizeof(int) + i * sizeof(ShortGameTickInfo)];
+			}
+			ticksInfo[i] = ticksShortInfoConv.info;
+		}
+		gameController.ResimulateGameFromPastTick(lastEqualTickID, ticksInfo);
+		break;
+	case 0x02:
+		SynchronizeGame();
+		break;
+	}
 	if (buff[1] == 0x01)
 	{
 		game.OneTick(buff[2], buff[3], buff[4], buff[5]);
@@ -277,7 +352,9 @@ bool ClientNetworkEngine::SynchronizeGame()
 	buffsizeConverter.bytes[0] = buffsizebytes[0];
 	buffsizeConverter.bytes[1] = buffsizebytes[1];
 	short buffsize = buffsizeConverter.integer;
-
+#ifdef NETWORK_PROFILING
+	out.Write("Size of synchronyzing packet = " + std::to_string(buffsize) + "\n");
+#endif
 	char *buff = new char[buffsize];
 	recv(sock, buff, buffsize, NULL);
 
@@ -420,6 +497,26 @@ bool ClientNetworkEngine::Disconnect()
 	out.Write("Disconnected.\n");
 #endif
 	return true;
+}
+
+bool ClientNetworkEngine::ChangeRoomName(std::wstring* newRoomName)
+{
+	BytesToShort roomNameSizeConv;
+	roomNameSizeConv.integer = (short)newRoomName->size();
+	char* buff = new char[1 + roomNameSizeConv.integer * sizeof(wchar_t)];
+	buff[0] = 0x0D;
+	buff[1] = roomNameSizeConv.bytes[0];
+	buff[2] = roomNameSizeConv.bytes[1];
+	BytesToWchar roomNameConv;
+	for (int i = 0; i < roomNameSizeConv.integer; i++)
+	{
+		roomNameConv.wchar = newRoomName->at(i);
+		buff[3 + i * sizeof(wchar_t)] = roomNameConv.bytes[0];
+		buff[4 + i * sizeof(wchar_t)] = roomNameConv.bytes[1];
+	}
+	send(sock, buff, 3 + roomNameSizeConv.integer, NULL);
+	recv(sock, buff, 1, NULL);
+	return (bool)buff[0];
 }
 
 std::vector<PhysicalObject>& ClientNetworkEngine::GetPhysicsForRenderer()

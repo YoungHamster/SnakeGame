@@ -57,7 +57,7 @@ void GameRoom::OneTick()
 	game.OneTick((players[0] != NULL ? players[0]->gameDir : 0),
 		(players[1] != NULL ? players[1]->gameDir : 0),
 		(players[2] != NULL ? players[2]->gameDir : 0),
-		(players[3] != NULL ? players[3]->gameDir : 0), &currentlyUsingPDs);
+		(players[3] != NULL ? players[3]->gameDir : 0));
 	for (int i = 0; i < 4; i++)
 	{
 		if (players[i] != NULL)
@@ -125,4 +125,27 @@ int GameRoom::DisconnectPlayer(connection *player)
 char GameRoom::GetPlayerDir(int playerID)
 {
 	return game.playerDirs[playerID];
+}
+
+char GameRoom::GetNumberOfPlayers()
+{
+	for (int i = 0; i < 4; i++)
+	{
+		if (players[i] != NULL)
+		{
+			if (!players[i]->connected)
+			{
+				players[i] = NULL;
+			}
+		}
+	}
+	char numberOfPlayers = 0;
+	for (int i = 0; i < 4; i++)
+	{
+		if (players[i] != 0)
+		{
+			numberOfPlayers++;
+		}
+	}
+	return numberOfPlayers;
 }
